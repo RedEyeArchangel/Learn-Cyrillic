@@ -3,6 +3,7 @@
 """Learning data: history, confusions, error proneness and study plan."""
 from collections import Counter
 
+from cyrillic.i18n import _
 from cyrillic.questions import CARDS
 
 
@@ -32,7 +33,7 @@ def partners(stats, k):
 # Components of error proneness (name, weight per event). A wrongly pressed letter counts double
 # (like a mistake + a confusion for the letter that was asked).
 # ponytail: counts never age; count only the last N events if that becomes a problem
-PARTS = [("Error rate (last 10)", None), ("Confused", .1), ("Wrongly pressed", .2), ("Looked up", .1)]
+PARTS = [(_("Error rate (last 10)"), None), (_("Confused"), .1), (_("Wrongly pressed"), .2), (_("Looked up"), .1)]
 
 
 def weakness_parts(stats):
@@ -59,7 +60,7 @@ def weakness(stats):
 
 def explain(k, v):
     """Breakdown of a weakness score as text."""
-    txt = [f"error rate {v[0]:.0%} ({v[0]:.2f})"]
+    txt = [_("error rate {:.0%} ({:.2f})").format(v[0], v[0])]
     txt += [f"{round(x / w)}× {name.lower()} ({x:.2f})" for (name, w), x in zip(PARTS[1:], v[1:])]
     return f"{k}:  " + "  +  ".join(txt) + f"  =  {sum(v):.2f}"
 

@@ -4,10 +4,12 @@
 import tkinter as tk
 from tkinter import ttk
 
+from cyrillic.i18n import _
+
 
 BG, CARD, HOVER, FG, MUTED, ACCENT = "#1b1d22", "#262930", "#323640", "#e8e8ea", "#9197a3", "#4f8cff"
 STATUS_BG = {"new": "#323640", "red": "#8e3434", "yellow": "#8a6a1c", "green": "#2e7042"}
-STATUS_TXT = {"new": "new", "red": "wrong", "yellow": "in progress", "green": "learned"}
+STATUS_TXT = {"new": _("new"), "red": _("wrong"), "yellow": _("in progress"), "green": _("learned")}
 OK, BAD = "#2ea043", "#da3633"
 # Learning curves: fixed color order (dataviz palette, dark steps), a color stays with its letter
 SERIES = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767"]

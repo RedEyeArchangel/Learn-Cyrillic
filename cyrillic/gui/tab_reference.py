@@ -5,6 +5,7 @@ from tkinter import font as tkfont, ttk
 
 from cyrillic.data import GROUPS, LETTERS
 from cyrillic.gui.theme import CARD, MUTED
+from cyrillic.i18n import _
 from cyrillic.storage import save_progress
 
 
@@ -17,16 +18,16 @@ class ReferenceTab:
         ttk.Style().configure("Ref.Treeview", font=fnt, rowheight=fnt.metrics("linespace") + 10)
         ttk.Style().configure("Ref.Treeview.Heading", font=bold)
         tree = ttk.Treeview(f, style="Ref.Treeview", columns=("sound", "example"))
-        tree.heading("#0", text="Letter")
-        tree.heading("sound", text="Pronunciation / function")
-        tree.heading("example", text="Example")
+        tree.heading("#0", text=_("Letter"))
+        tree.heading("sound", text=_("Pronunciation / function"))
+        tree.heading("example", text=_("Example"))
         pad = fnt.measure("MMM")  # indentation + expand arrow
-        tree.column("#0", width=bold.measure("Group 5") + pad, stretch=False)
+        tree.column("#0", width=bold.measure(_("Group {}").format(5)) + pad, stretch=False)
         tree.column("sound", width=fnt.measure("x" * 40))
         tree.column("example", width=max(fnt.measure(f"{l[4]} ({l[5]})") for l in LETTERS) + pad, stretch=False)
         rows = {}
         for g, title in GROUPS.items():
-            gid = tree.insert("", "end", text=f"Group {g}", values=(title, ""), open=True, tags=("group",))
+            gid = tree.insert("", "end", text=_("Group {}").format(g), values=(title, ""), open=True, tags=("group",))
             for l in LETTERS:
                 if l[6] == g:
                     rows[tree.insert(gid, "end", text=f"{l[0]} {l[1]}", values=(l[3], f"{l[4]} ({l[5]})"))] = l
@@ -35,7 +36,7 @@ class ReferenceTab:
         tree.configure(yscrollcommand=sb.set)
         sb.pack(side="right", fill="y")
         tree.pack(fill="both", expand=True)
-        ttk.Label(f, text="Click a row to hear the example word", style="Card.TLabel",
+        ttk.Label(f, text=_("Click a row to hear the example word"), style="Card.TLabel",
                   foreground=MUTED).pack(anchor="w", pady=(6, 0))
         tree.bind("<<TreeviewSelect>>", lambda e: (l := rows.get(tree.focus())) and self.look_up(l))
         return f

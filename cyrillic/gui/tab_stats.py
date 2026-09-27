@@ -7,6 +7,7 @@ from tkinter import font as tkfont, messagebox, ttk
 
 from cyrillic.data import LETTERS
 from cyrillic.gui.theme import CARD, FG, HOVER, MUTED, SERIES, STYLES, flat_button
+from cyrillic.i18n import _
 from cyrillic.stats import PARTS, PLAN_UNLOCK, explain, make_plan, moving, weakness, weakness_parts
 from cyrillic.storage import save_progress
 
@@ -16,7 +17,7 @@ class StatsTab:
         f = ttk.Frame(parent, padding=16, style="Card.TFrame")
         left = ttk.Frame(f, style="Card.TFrame")
         left.pack(side="left", fill="y")
-        ttk.Label(left, text="Letters in the chart (click)", style="Card.TLabel",
+        ttk.Label(left, text=_("Letters in the chart (click)"), style="Card.TLabel",
                   foreground=MUTED).pack(anchor="w")
         grid = ttk.Frame(left, style="Card.TFrame")
         grid.pack(anchor="w", pady=(4, 10))
@@ -29,17 +30,17 @@ class StatsTab:
         ttk.Style().configure("Small.TButton", padding=(6, 4))
         row = ttk.Frame(grid, style="Card.TFrame")
         row.grid(row=4, column=1, columnspan=7, sticky="w")
-        ttk.Button(row, text="Show all", style="Small.TButton",
+        ttk.Button(row, text=_("Show all"), style="Small.TButton",
                    command=lambda: self.show_curves(LETTERS)).pack(side="left", padx=2)
-        ttk.Button(row, text="Hide all", style="Small.TButton",
+        ttk.Button(row, text=_("Hide all"), style="Small.TButton",
                    command=lambda: self.show_curves([])).pack(side="left", padx=2)
-        ttk.Label(left, text="Confusions", style="Card.TLabel", foreground=MUTED).pack(anchor="w")
+        ttk.Label(left, text=_("Confusions"), style="Card.TLabel", foreground=MUTED).pack(anchor="w")
         fnt = tkfont.Font(family="Sans", size=11)  # row height from font metrics (HiDPI)
         ttk.Style().configure("Stats.Treeview", font=fnt, rowheight=fnt.metrics("linespace") + 6)
         self.conf_tree = ttk.Treeview(left, style="Stats.Treeview", columns=("n",), height=5)
-        self.conf_tree.heading("#0", text="correct → chosen")
-        self.conf_tree.heading("n", text="Count")
-        self.conf_tree.column("n", width=fnt.measure("Count") + 20, stretch=False, anchor="e")
+        self.conf_tree.heading("#0", text=_("correct → chosen"))
+        self.conf_tree.heading("n", text=_("Count"))
+        self.conf_tree.column("n", width=fnt.measure(_("Count")) + 20, stretch=False, anchor="e")
         self.conf_tree.pack(fill="x", pady=(4, 10))
         self.lookup_lbl = ttk.Label(left, style="Card.TLabel")
         self.lookup_lbl.pack(anchor="w", pady=(0, 6))
@@ -47,9 +48,8 @@ class StatsTab:
         self.done_lbl.pack(anchor="w")
         btns = ttk.Frame(left, style="Card.TFrame")
         btns.pack(anchor="w", pady=6)
-        self.plan_btn = ttk.Button(btns, text="Create study plan", command=self.create_plan)
+        self.plan_btn = ttk.Button(btns, text=_("Create study plan"), command=self.create_plan)
         self.plan_btn.pack(side="left")
-        ttk.Button(btns, text="Reset learning data", command=self.reset_stats).pack(side="left", padx=6)
         self.plan_lbl = ttk.Label(left, style="Card.TLabel", justify="left", text="\n")  # reserve 2 lines
         self.plan_lbl.pack(anchor="w", fill="x")
         left.bind("<Configure>", lambda e: self.plan_lbl.config(wraplength=e.width))
@@ -58,7 +58,7 @@ class StatsTab:
         views = ttk.Frame(right, style="Card.TFrame")
         views.pack(anchor="w", pady=(0, 8))
         self.view = tk.StringVar(value="curve")
-        for v, t in (("curve", "Learning curves"), ("bars", "Error proneness")):
+        for v, t in (("curve", _("Learning curves")), ("bars", _("Error proneness"))):
             ttk.Radiobutton(views, text=t, value=v, variable=self.view, style="Toolbutton",
                             command=self.draw_chart).pack(side="left", padx=(0, 4))
         self.chart = tk.Canvas(right, bg=CARD, highlightthickness=0, width=560, height=340)
@@ -79,15 +79,15 @@ class StatsTab:
         rows = sorted(((n, r, c) for r, d in st["conf"].items() for c, n in d.items()), reverse=True)
         for n, r, c in rows:
             self.conf_tree.insert("", "end", text=f"{r}  →  {c}", values=(n,))
-        unlocked = st["done"] >= PLAN_UNLOCK
-        self.done_lbl.config(text=f"Easy fully learned: {st['done']}× "
-                                  f"({'study plan unlocked' if unlocked else f'{PLAN_UNLOCK}× needed'})")
+        unlocked = st["rounds"]["Easy"] >= PLAN_UNLOCK
+        self.done_lbl.config(text=_("Easy fully learned: {}× ({})").format(
+            st["rounds"]["Easy"], _("study plan unlocked") if unlocked else _("{}× needed").format(PLAN_UNLOCK)))
         self.plan_btn.state(["!disabled"] if unlocked else ["disabled"])
         looked = sorted(st["lookup"].items(), key=lambda x: -x[1])
-        self.lookup_lbl.config(text="Looked up: " + (" · ".join(f"{k} {n}×" for k, n in looked[:8]) or "–"))
+        self.lookup_lbl.config(text=_("Looked up: ") + (" · ".join(f"{k} {n}×" for k, n in looked[:8]) or "–"))
         plan = " · ".join(st["plan"])  # reasons per letter: "Error proneness" chart
-        self.plan_lbl.config(text=f"Your study plan: {plan}\n(Reasons: “Error proneness”, hover a bar)"
-                             if plan else "No study plan yet.\n")
+        self.plan_lbl.config(text=_("Your study plan: {}\n(Reasons: “Error proneness”, hover a bar)").format(plan)
+                             if plan else _("No study plan yet.\n"))
         self.draw_chart()
 
     def toggle_curve(self, k, draw=True):
@@ -110,15 +110,15 @@ class StatsTab:
         self.stats["plan"] = make_plan(self.stats)
         save_progress(self.progress)
         if not self.stats["plan"]:
-            messagebox.showinfo("Study plan", "No weaknesses found – keep it up!")
+            messagebox.showinfo(_("Study plan"), _("No weaknesses found – keep it up!"))
         self.curves.clear()
         self.preselect = True
         self.update_plan_cb()
         self.refresh_stats()
 
     def reset_stats(self):
-        if messagebox.askyesno("Reset learning data", "Delete learning curves, confusions, lookups and the "
-                               "study plan?\n(“Easy fully learned” is kept.)"):
+        if messagebox.askyesno(_("Reset learning data"), _("Delete learning curves, confusions, lookups and the "
+                                                           "study plan?\n(“Easy fully learned” is kept.)")):
             for k in ("hist", "conf", "lookup"):
                 self.stats[k].clear()
             self.stats["plan"] = []
@@ -140,7 +140,7 @@ class StatsTab:
         top = rows[0][0] if rows else 1
         x0, x1, y0, y1 = fnt.measure("0.00") + 14, w - lh, 4 * lh, h - 5 * lh
         cv.create_text(x0, 2, anchor="nw", fill=FG, font=("Sans", 12, "bold"),
-                       text="Error proneness · how the study plan weights are made up")
+                       text=_("Error proneness · how the study plan weights are made up"))
         x, ly = x0, 2 * lh
         for (name, wt), col in zip(PARTS, SERIES):  # legend with weights, wraps when out of space
             label = name + (f"  ×{wt}" if wt else "")
@@ -157,7 +157,7 @@ class StatsTab:
         detail = cv.create_text(x0, h - 4, anchor="sw", fill=FG, font=fnt, width=w - x0 - 8,
                                 text=explain(rows[0][1], rows[0][2]) if rows else "")
         if not rows:
-            cv.create_text((x0 + x1) / 2, (y0 + y1) / 2, fill=MUTED, font=("Sans", 13), text="No data yet")
+            cv.create_text((x0 + x1) / 2, (y0 + y1) / 2, fill=MUTED, font=("Sans", 13), text=_("No data yet"))
         bw = (x1 - x0) / max(len(rows), 1)
         half = min(bw * .35, 3 * lh)
         for i, (tot, k, v) in enumerate(rows):
@@ -182,7 +182,7 @@ class StatsTab:
         per_col = math.ceil(len(series) / cols) if series else 1
         x0, x1, y0, y1 = fnt.measure("100%") + 14, w - (1 + 3.5 * cols) * lh, lh, h - 2.5 * lh
         cv.create_text(x0, 2, anchor="nw", fill=FG, font=("Sans", 12, "bold"),
-                       text="Learning curve · hit rate (average of the last 5 attempts)")
+                       text=_("Learning curve · hit rate (average of the last 5 attempts)"))
         y0 += lh
         n = max((len(v) for v in series.values()), default=0)
         X = lambda i: x0 + (x1 - x0) * (i / max(n - 1, 1))
@@ -192,10 +192,10 @@ class StatsTab:
             cv.create_text(x0 - 8, Y(v), anchor="e", fill=MUTED, font=fnt, text=f"{v:.0%}")
         for i in sorted({0, (n - 1) // 2, n - 1}) if n else ():
             cv.create_text(X(i), y1 + 6, anchor="n", fill=MUTED, font=fnt, text=i + 1)
-        cv.create_text((x0 + x1) / 2, h - 4, anchor="s", fill=MUTED, font=fnt, text="Attempt")
+        cv.create_text((x0 + x1) / 2, h - 4, anchor="s", fill=MUTED, font=fnt, text=_("Attempt"))
         if not series:
             cv.create_text((x0 + x1) / 2, (y0 + y1) / 2, fill=MUTED, font=("Sans", 13),
-                           text="No data yet – pick letters or practice on “Easy”")
+                           text=_("No data yet – pick letters or practice on “Easy”"))
         for k, v in series.items():
             pts = [(X(i), Y(y)) for i, y in enumerate(v)]
             if len(pts) > 1:

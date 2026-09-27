@@ -56,9 +56,18 @@ study plan.
 
 ![Reference tab](docs/screenshots/reference.png)
 
-### Export / import
-Save your whole progress including all learning data to a JSON file and restore it later or on another
-machine. Imported files are validated before anything is replaced.
+### Completed rounds
+When every card of a level is learned (e.g. 33/33 letters), the level counts as completed once and its
+progress starts again from zero. The status bar shows how often each level was completed
+(e.g. *Completed: Easy 2× · Medium 1× · Hard 0×*).
+
+### Settings
+- **Language:** English or German (Deutsch) – the whole app including meanings and pronunciation hints.
+  Switching restarts the app.
+- **Voice:** pick one of the Piper voices in `voices/` and test it.
+- **Export / import:** save your whole progress including all learning data to a JSON file and restore it
+  later or on another machine. Imported files are validated before anything is replaced.
+- **Reset:** clear the progress of a single level, or the learning data (statistics and study plan).
 
 ## Installation
 
@@ -84,9 +93,9 @@ python3 -m venv .venv
 
 ## Usage notes
 
-- Progress is saved automatically to `~/.local/share/learn-cyrillic/progress.json`.
-- *Reset* resets the current level only; learning data is kept. *Reset learning data* in the
-  Learning data tab clears the statistics.
+- Progress is saved automatically to `~/.local/share/learn-cyrillic/progress.json`, language and voice to
+  `settings.json` in the same folder (not part of export/import).
+- The reset buttons in Settings reset one level (learning data is kept) or only the learning data.
 - Self-test: `python3 learn_cyrillic.py --test`
 
 ## Project structure
@@ -99,11 +108,13 @@ cyrillic/
   scheduler.py             streaks, status, next card
   stats.py                 history, confusions, error proneness, study plan
   storage.py               load / validate / save progress
+  settings.py              language and voice settings
+  i18n.py                  German texts (English is the key)
   sound.py                 Piper voices, fanfare
   selftest.py              self-test
   gui/
     theme.py               dark theme and colors
-    app.py                 main window, status bar, export/import, speech
+    app.py                 main window, status bar, settings tab, export/import, speech
     tab_alphabet.py · tab_learn.py · tab_stats.py · tab_reference.py
 voices/                    Piper voice models (not in the repository)
 ```

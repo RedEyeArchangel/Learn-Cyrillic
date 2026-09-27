@@ -1,14 +1,18 @@
 # SPDX-License-Identifier: CC-BY-NC-SA-4.0
 # Copyright (c) 2026 RedEyeArchangel
 """Self-test: python learn_cyrillic.py --test"""
+import ast
 import json
 import os
 import random
+import re
 import tempfile
 import wave
+from pathlib import Path
 
-from cyrillic.data import GROUPS, LETTERS, SOUND
+from cyrillic.data import GROUPS, LETTERS, SENTENCES, SOUND, WORDS
 from cyrillic.gui.theme import STYLES
+from cyrillic.i18n import DE
 from cyrillic.questions import CARDS, QTYPES, question, translit
 from cyrillic.scheduler import BATCH, MASTER, learned, pick, record, status
 from cyrillic.sound import fanfare
@@ -60,7 +64,7 @@ def selftest():
     assert status(full[pick(full, letters, rng=rng).key]) == "green", "everything learned -> review"
     assert learned(full, letters) == 33 and learned({}, letters) == 0
     # learning data + study plan
-    st = {"hist": {}, "conf": {}, "done": 0, "plan": [], "lookup": {}}
+    st = {"hist": {}, "conf": {}, "rounds": {}, "plan": [], "lookup": {}}
     assert make_plan(st) == []
     st["lookup"]["Ю"] = 2
     assert make_plan(st) == ["Ю"], "looking up alone -> letter goes into the plan"
@@ -92,10 +96,12 @@ def selftest():
     assert normalize(json.loads(json.dumps(full, ensure_ascii=False))) == full
     assert normalize({"А": {"streak": 1, "wrong": 0}})["Easy"]["А"]["streak"] == 1, "oldest format"
     old = normalize({"Leicht": {"А": {"streak": 2, "wrong": 0}}, "Schwer": {}, "stats": {"done": 2}})
-    assert old["Easy"]["А"]["streak"] == 2 and "Leicht" not in old and old["stats"]["done"] == 2, "German levels"
+    assert old["Easy"]["А"]["streak"] == 2 and "Leicht" not in old and old["stats"]["rounds"]["Easy"] == 2, "German levels"
+    assert normalize({"stats": {"done": 3}})["stats"]["rounds"] == {"Easy": 3, "Medium": 0, "Hard": 0}, \
+        "old Easy counter"
     for bad in ([], {"Easy": {"А": 5}}, {"Easy": {}, "stats": {"done": "x"}},
                 {"Easy": {}, "stats": {"hist": {"А": ["a"]}}}, {"foo": 1}, {"Easy": {}, "stats": 3},
-                {"Easy": {}, "stats": {"plan": [1]}}, {"Leicht": {"А": 5}}):
+                {"Easy": {}, "stats": {"plan": [1]}}, {"Leicht": {"А": 5}}, {"stats": {"rounds": {"Easy": "x"}}}):
         try:
             normalize(bad)
             raise AssertionError(bad)
@@ -106,4 +112,15 @@ def selftest():
     with wave.open(wav) as w:
         assert 1 < w.getnframes() / w.getframerate() < 3, "fanfare ~1.6 s"
     os.remove(wav)
+    # German: every _("...") in the code is translated, placeholders match, quiz answers stay unique
+    used = {n.args[0].value for f in Path(__file__).parent.rglob("*.py") for n in ast.walk(ast.parse(f.read_text()))
+            if isinstance(n, ast.Call) and getattr(n.func, "id", None) == "_" and n.args
+            and isinstance(n.args[0], ast.Constant)}
+    assert used <= set(DE), used - set(DE)
+    content = [l[3] for l in LETTERS] + [l[5] for l in LETTERS] + list(SOUND.values()) + list(GROUPS.values())
+    content += [m for _, m in WORDS + SENTENCES]
+    assert not [t for t in content if t not in DE and len(t) > 2], "content without German text"
+    assert all(re.findall(r"{[^}]*}", k) == re.findall(r"{[^}]*}", v) for k, v in DE.items()), "placeholders"
+    for texts in ([l[3] for l in LETTERS], SOUND.values(), [m for _, m in WORDS], [m for _, m in SENTENCES]):
+        assert len({DE.get(t, t) for t in texts}) == len(list(texts)), "German answers must be unique"
     print("ok")

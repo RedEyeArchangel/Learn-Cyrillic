@@ -8,6 +8,7 @@ import tkinter as tk
 from tkinter import font as tkfont, messagebox, ttk
 
 from cyrillic.gui.theme import ACCENT, BAD, BG, CARD, FG, HOVER, MUTED, OK, STATUS_TXT, flat_button
+from cyrillic.i18n import LANG, _
 from cyrillic.questions import CARDS, LEVEL_TXT, QTYPES, question
 from cyrillic.scheduler import EXAM_MAX_WRONG, EXAM_QUESTIONS, MASTER, learned, pick, record, status
 from cyrillic.sound import fanfare
@@ -21,10 +22,10 @@ class LearnTab:
         top = ttk.Frame(f, style="Card.TFrame")
         top.pack(fill="x")
         for lv in CARDS:
-            ttk.Radiobutton(top, text=f"{lv} · {LEVEL_TXT[lv]}", value=lv, variable=self.level,
+            ttk.Radiobutton(top, text=f"{_(lv)} · {LEVEL_TXT[lv]}", value=lv, variable=self.level,
                             style="Toolbutton", command=self.change_level).pack(side="left", padx=(0, 4))
         self.listen = tk.BooleanVar()
-        self.listen_cb = ttk.Checkbutton(top, text="Listen only", variable=self.listen, style="Card.TCheckbutton",
+        self.listen_cb = ttk.Checkbutton(top, text=_("Listen only"), variable=self.listen, style="Card.TCheckbutton",
                                          command=self.next_question)
         self.listen_cb.pack(side="left", padx=16)
         self.use_plan = tk.BooleanVar()
@@ -41,7 +42,7 @@ class LearnTab:
 
         self.q_lbl = ttk.Label(f, style="Card.TLabel", wraplength=900, justify="center")
         self.q_lbl.pack(pady=5, expand=True)
-        self.replay = ttk.Button(f, text="🔊 Listen again", command=lambda: self.say(self.card.say))
+        self.replay = ttk.Button(f, text=_("🔊 Listen again"), command=lambda: self.say(self.card.say))
         self.feedback = ttk.Label(f, font=("Sans", 16), style="Card.TLabel", wraplength=900, justify="center")
         self.feedback.pack()
         f.bind("<Configure>", lambda e: [w.config(wraplength=e.width - 80) for w in (self.q_lbl, self.feedback)])
@@ -59,14 +60,16 @@ class LearnTab:
 
     def update_exam_btn(self):
         n = min(EXAM_QUESTIONS, len(CARDS[self.level.get()]))
-        self.exam_btn.config(text="Cancel exam" if self.exam else
-                             f"Exam ({n} questions, max. {EXAM_MAX_WRONG} mistakes)")
+        self.exam_btn.config(text=_("Cancel exam") if self.exam else
+                             _("Exam ({} questions, max. {} mistakes)").format(n, EXAM_MAX_WRONG))
 
     def update_plan_cb(self):
-        done, ok = self.stats["done"], self.stats["done"] >= PLAN_UNLOCK and self.stats["plan"]
-        self.plan_cb.config(text="Study plan" if ok else
-                            f"Study plan (after {PLAN_UNLOCK}× Easy, {min(done, PLAN_UNLOCK)}/{PLAN_UNLOCK})"
-                            if done < PLAN_UNLOCK else "Study plan (create it under Learning data)")
+        done = self.stats["rounds"]["Easy"]
+        ok = done >= PLAN_UNLOCK and self.stats["plan"]
+        self.plan_cb.config(text=_("Study plan") if ok else
+                            _("Study plan (after {}× Easy, {}/{})").format(PLAN_UNLOCK, min(done, PLAN_UNLOCK),
+                                                                           PLAN_UNLOCK)
+                            if done < PLAN_UNLOCK else _("Study plan (create it under Learning data)"))
         self.plan_cb.state(["!disabled"] if ok else ["disabled"])
         if not ok:
             self.use_plan.set(False)
@@ -94,14 +97,14 @@ class LearnTab:
                 return self.finish_exam()
             self.card = self.exam["queue"].pop()
             done = self.exam["total"] - len(self.exam["queue"])
-            info = f"Exam · question {done}/{self.exam['total']} · mistakes {self.exam['wrong']}"
+            info = _("Exam · question {}/{} · mistakes {}").format(done, self.exam["total"], self.exam["wrong"])
         else:
             last = self.card.key if hasattr(self, "card") else None
             plan = self.use_plan.get()
             self.card = pick(prog, plan_cards(self.stats["plan"], lv) if plan else CARDS[lv], last)
             s = min(prog.get(self.card.key, {"streak": 0})["streak"], MASTER)
             info = f"{STATUS_TXT[status(prog.get(self.card.key))]} {'●' * s}{'○' * (MASTER - s)}"
-            info += "  ·  Study plan" if plan else ""
+            info += "  ·  " + _("Study plan") if plan else ""
         qtypes = QTYPES[lv]
         if self.listen.get() and lv != "Easy":
             self.qtype, title = qtypes[-1]
@@ -144,17 +147,18 @@ class LearnTab:
             record_letter(self.stats, key(self.right), key(o))
         if before < len(CARDS[lv]) == learned(self.progress[lv], CARDS[lv]):
             self.after(900, lambda: self.celebrate(lv))
+            self.stats["rounds"][lv] += 1
+            self.progress[lv].clear()  # level done -> count it and start again from zero
             if lv == "Easy":
-                self.stats["done"] += 1
                 self.update_plan_cb()
         save_progress(self.progress)
         self.opts[self.right].config(bg=OK)
         detail = c.info if lv == "Easy" else f"{c.show}  =  {c.answer}  ·  {c.meaning}"
         if correct:
-            self.feedback.config(text=f"Correct!  ·  {detail}", foreground=OK)
+            self.feedback.config(text=_("Correct!  ·  {}").format(detail), foreground=OK)
         else:
             b.config(bg=BAD)
-            self.feedback.config(text=f"Wrong — {detail}", foreground=BAD)
+            self.feedback.config(text=_("Wrong — {}").format(detail), foreground=BAD)
             if self.exam:
                 self.exam["wrong"] += 1
         reveal = {"listen": c.show, "spell": c.show, "wordgap": c.show}
@@ -174,12 +178,13 @@ class LearnTab:
         self.update_idletasks()
         w, h = cv.winfo_width(), cv.winfo_height()
         px = tkfont.Font(family="Sans", size=10).metrics("linespace") / 14  # scale like the font (HiDPI)
-        cv.create_text(w / 2, h / 2, anchor="s", text="Well done! 🎉", fill=FG, font=("Sans", 60, "bold"))
+        cv.create_text(w / 2, h / 2, anchor="s", text=_("Well done! 🎉"), fill=FG, font=("Sans", 60, "bold"))
         cv.create_text(w / 2, h / 2 + 10 * px, anchor="n", fill=MUTED, font=("Sans", 22),
-                       text=f"Level {lv}: all {len(CARDS[lv])} {LEVEL_TXT[lv].lower()} learned")
+                       text=_("Level {}: all {} {} learned").format(  # German nouns stay capitalized
+                           _(lv), len(CARDS[lv]), LEVEL_TXT[lv] if LANG == "de" else LEVEL_TXT[lv].lower()))
         colors = [ACCENT, OK, "#f2cc60", "#ff7b72", "#d2a8ff", "#56d4dd"]
         bits = []  # ponytail: 120 rectangles, enough for the effect and cheap
-        for _ in range(120):
+        for _n in range(120):
             x, y, s = random.uniform(0, w), random.uniform(-h * .4, 0), random.uniform(6, 12) * px
             bits.append((cv.create_rectangle(x, y, x + s, y + s * .6, fill=random.choice(colors), width=0),
                          random.uniform(-1, 1) * px, random.uniform(3, 6) * px))
@@ -199,5 +204,5 @@ class LearnTab:
         wrong = self.exam["wrong"]
         passed = wrong <= EXAM_MAX_WRONG
         self.toggle_exam()
-        messagebox.showinfo("Exam", f"{'Passed! 🎉' if passed else 'Not passed.'}\n"
-                                    f"{wrong} mistakes (allowed: {EXAM_MAX_WRONG})")
+        messagebox.showinfo(_("Exam"), (_("Passed! 🎉") if passed else _("Not passed.")) + "\n" +
+                            _("{} mistakes (allowed: {})").format(wrong, EXAM_MAX_WRONG))

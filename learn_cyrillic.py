@@ -10,6 +10,8 @@ import sys
 
 if __name__ == "__main__":
     if "--test" in sys.argv:
+        from cyrillic import i18n
+        i18n.LANG = "en"  # the asserts check the English texts
         from cyrillic.selftest import selftest
         selftest()
     else:

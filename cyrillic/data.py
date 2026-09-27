@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: CC-BY-NC-SA-4.0
 # Copyright (c) 2026 RedEyeArchangel
 """Alphabet, words, sentences and sound lists (pure data)."""
+from cyrillic.i18n import _
 
 
 # (upper, lower, name, pronunciation, example word, translation, group)
@@ -31,7 +32,7 @@ LETTERS = [
     ("Ц", "ц", "цэ", "ts as in 'cats'", "центр", "center", 4),
     ("Ч", "ч", "чэ", "ch as in 'church'", "чай", "tea", 4),
     ("Ш", "ш", "ша", "sh (hard)", "школа", "school", 4),
-    ("Щ", "щ", "ща", "long, soft shch", "борщ", "borscht", 4),
+    ("Щ", "щ", "ща", "long, soft sh", "борщ", "borscht", 4),
     ("Ъ", "ъ", "твёрдый знак", "hard sign: separates a consonant from the following vowel; rare", "объект", "object", 5),
     ("Ы", "ы", "ы", "dull i, with the tongue pulled back", "мы", "we", 4),
     ("Ь", "ь", "мягкий знак", "soft sign: softens (palatalizes) the preceding consonant", "мать", "mother", 5),
@@ -39,6 +40,7 @@ LETTERS = [
     ("Ю", "ю", "ю", "yu as in 'you'", "юг", "south", 4),
     ("Я", "я", "я", "ya as in 'yard'", "я", "I", 4),
 ]
+LETTERS = [(u, lo, n, _(pr), ex, _(tr), g) for u, lo, n, pr, ex, tr, g in LETTERS]
 
 GROUPS = {
     1: "Same look, same sound",
@@ -47,6 +49,7 @@ GROUPS = {
     4: "New sounds and letter combinations (zh, sh, ch, ts, ya …)",
     5: "The two signs without a sound of their own",
 }
+GROUPS = {g: _(t) for g, t in GROUPS.items()}
 
 
 # --- Levels: Easy = letters, Medium = words, Hard = sentences ---
@@ -69,6 +72,7 @@ WORDS = [
     ("чашка", "cup"), ("журнал", "magazine"), ("подъезд", "entrance (of a building)"), ("хорошо", "good"),
     ("большой", "big"), ("маленький", "small"),
 ]
+WORDS = [(ru, _(m)) for ru, m in WORDS]
 
 SENTENCES = [
     ("Это мой дом.", "This is my house."),
@@ -102,6 +106,7 @@ SENTENCES = [
     ("Где мой телефон?", "Where is my phone?"),
     ("Зимой идёт снег.", "It snows in winter."),
 ]
+SENTENCES = [(ru, _(m)) for ru, m in SENTENCES]
 
 # Transliteration, simplified English style (close to BGN/PCGN): ж=zh, х=kh, ц=ts, ч=ch, ш=sh, щ=shch
 TR = dict(zip("абвгдеёжзийклмнопрстуфхцчшщъыьэюя",
@@ -122,11 +127,12 @@ SOUND = {
     "Б": "b – voiced", "П": "p – voiceless", "В": "v – voiced", "Ф": "f – voiceless",
     "Г": "g – voiced", "К": "k – voiceless", "Д": "d – voiced", "Т": "t – voiceless",
     "З": "z – voiced", "С": "s – voiceless",
-    "Ж": "zh – voiced, hard", "Ш": "sh – voiceless, hard", "Щ": "shch – voiceless, soft, long",
+    "Ж": "zh – voiced, hard", "Ш": "sh – voiceless, hard", "Щ": "sh – voiceless, soft, long",
     "Ч": "ch – voiceless, soft", "Ц": "ts – voiceless, hard", "Х": "kh – voiceless, rough",
     "Л": "l", "М": "m", "Н": "n", "Р": "r – rolled",
     "Ь": "no sound – softens", "Ъ": "no sound – separates (hard)",
 }
+SOUND = {k: _(v) for k, v in SOUND.items()}
 
 # Easily confused letters -> preferred as wrong answers
 SIMILAR = ["ШЩЧЦЖ", "БП", "ДТ", "ГК", "ИЙЫ", "ЕЁЭ", "БВР", "ЗС", "ЬЪЫБ", "ЮУЯ", "ПНГТ", "ХЖК", "ЛДП", "ОАЯ", "МТК", "ФВ"]

@@ -6,6 +6,7 @@ import re
 from collections import namedtuple
 
 from cyrillic.data import CYR_SWAP, LETTERS, MISREAD, SENTENCES, SIMILAR, SOUND, TR, VOWELS, WORDS
+from cyrillic.i18n import _
 
 
 def translit(text, rng=None, p=0.0):
@@ -38,17 +39,17 @@ CARDS = {
     "Medium": [text_card(*w) for w in WORDS],
     "Hard": [text_card(*s) for s in SENTENCES],
 }
-LEVEL_TXT = {"Easy": "Letters", "Medium": "Words", "Hard": "Sentences"}
+LEVEL_TXT = {"Easy": _("Letters"), "Medium": _("Words"), "Hard": _("Sentences")}
 
 # Question types per level: (type, question). Listening only from Medium on.
 QTYPES = {
-    "Easy": [("sound", "Which sound?"), ("letter", "Which letter makes this sound?")],
-    "Medium": [("read", "How do you read this?"), ("write", "How do you write this?"),
-               ("meaning", "What does this mean?"), ("reverse", "How do you say this in Russian?"),
-               ("spell", "Which letter is missing?"), ("listen", "What do you hear?")],
-    "Hard": [("read", "How do you read this?"), ("write", "How do you write this?"),
-             ("meaning", "What does this mean?"), ("reverse", "How do you say this in Russian?"),
-             ("wordgap", "Which word is missing?"), ("listen", "What do you hear?")],
+    "Easy": [("sound", _("Which sound?")), ("letter", _("Which letter makes this sound?"))],
+    "Medium": [("read", _("How do you read this?")), ("write", _("How do you write this?")),
+               ("meaning", _("What does this mean?")), ("reverse", _("How do you say this in Russian?")),
+               ("spell", _("Which letter is missing?")), ("listen", _("What do you hear?"))],
+    "Hard": [("read", _("How do you read this?")), ("write", _("How do you write this?")),
+             ("meaning", _("What does this mean?")), ("reverse", _("How do you say this in Russian?")),
+             ("wordgap", _("Which word is missing?")), ("listen", _("What do you hear?"))],
 }
 RU_WORD = r"[А-Яа-яЁё-]+"
 SENT_WORDS = sorted({t.lower() for s, _ in SENTENCES for t in re.findall(RU_WORD, s)})

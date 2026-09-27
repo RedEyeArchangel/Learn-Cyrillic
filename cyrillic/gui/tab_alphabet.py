@@ -6,6 +6,7 @@ from tkinter import ttk
 
 from cyrillic.data import LETTERS
 from cyrillic.gui.theme import MUTED, STATUS_BG, STATUS_TXT, flat_button
+from cyrillic.i18n import _
 from cyrillic.scheduler import MASTER, status
 
 
@@ -40,8 +41,8 @@ class AlphabetTab:
         self.letter_stat.pack()
         btns = ttk.Frame(right, style="Card.TFrame")
         btns.pack(pady=10)
-        ttk.Button(btns, text="🔊 Letter", command=lambda: self.say(self.cur[2])).pack(side="left", padx=5)
-        ttk.Button(btns, text="🔊 Word", command=lambda: self.say(self.cur[4])).pack(side="left", padx=5)
+        ttk.Button(btns, text=_("🔊 Letter"), command=lambda: self.say(self.cur[2])).pack(side="left", padx=5)
+        ttk.Button(btns, text=_("🔊 Word"), command=lambda: self.say(self.cur[4])).pack(side="left", padx=5)
         return f
 
     def show(self, l, speak=True):
@@ -51,7 +52,7 @@ class AlphabetTab:
         self.big.config(text=f"{l[0]} {l[1]}")
         self.hint.config(text=f"Name: {l[2]}  —  {l[3]}")
         self.word.config(text=f"{l[4]}  =  {l[5]}")
-        self.letter_stat.config(text=f"Status: {STATUS_TXT[status(prog.get(l[0]))]}  ·  "
-                                     f"Streak {min(p['streak'], MASTER)}/{MASTER}  ·  Total mistakes {p['wrong']}")
+        self.letter_stat.config(text=_("Status: {}  ·  Streak {}/{}  ·  Total mistakes {}").format(
+            STATUS_TXT[status(prog.get(l[0]))], min(p["streak"], MASTER), MASTER, p["wrong"]))
         if speak:
             self.say(l[2])

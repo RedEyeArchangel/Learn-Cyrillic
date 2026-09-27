@@ -26,18 +26,21 @@ def normalize(data):
     st = data.setdefault("stats", {})
     if not isinstance(st, dict):
         raise ValueError("invalid learning data")
-    for k, v in (("hist", {}), ("conf", {}), ("done", 0), ("plan", []), ("lookup", {})):
+    done = st.pop("done", 0)  # older versions only counted Easy
+    for k, v in (("hist", {}), ("conf", {}), ("rounds", {"Easy": done}), ("plan", []), ("lookup", {})):
         st.setdefault(k, v)
     ints = lambda xs: all(isinstance(x, int) for x in xs)
     dicts = lambda *xs: all(isinstance(x, dict) for x in xs)
-    ok = (dicts(*(data[lv] for lv in CARDS), st["hist"], st["conf"], st["lookup"])
+    ok = (dicts(*(data[lv] for lv in CARDS), st["hist"], st["conf"], st["lookup"], st["rounds"])
           and all(dicts(p) and ints([p.get("streak"), p.get("wrong")]) for lv in CARDS for p in data[lv].values())
           and all(isinstance(h, list) and ints(h) for h in st["hist"].values())
           and all(dicts(c) and ints(c.values()) for c in st["conf"].values())
-          and ints([st["done"], *st["lookup"].values()]) and isinstance(st["plan"], list)
+          and ints([done, *st["rounds"].values(), *st["lookup"].values()]) and isinstance(st["plan"], list)
           and all(isinstance(k, str) for k in st["plan"]))
     if not ok:
         raise ValueError("invalid progress file")
+    for lv in CARDS:
+        st["rounds"].setdefault(lv, 0)
     return data
 
 
