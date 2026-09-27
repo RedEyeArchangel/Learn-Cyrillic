@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+# Piper voice models are large (~63 MB each) - download them, see voices/README.md
+voices/*
+!voices/README.md
+# exported progress files (personal learning data)
+kyrillisch-fortschritt-*.json
+cyrillic-progress-*.json

@@ -1,0 +1,2 @@
+# Optional: neural Russian voice (Piper). Without it the app falls back to spd-say/espeak.
+piper-tts>=1.8
