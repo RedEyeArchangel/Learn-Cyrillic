@@ -14,7 +14,8 @@ from cyrillic.data import GROUPS, LETTERS, SENTENCES, SOUND, WORDS
 from cyrillic.gui.theme import STYLES
 from cyrillic.i18n import DE
 from cyrillic.questions import CARDS, QTYPES, question, translit
-from cyrillic.scheduler import BATCH, MASTER, learned, pick, record, status
+from cyrillic.scheduler import (BATCH, KEEP_AFTER, MASTER, complete_level, learned, pick, record,
+                                status)
 from cyrillic.sound import fanfare
 from cyrillic.stats import (HIST_MAX, SOUND_KEY, explain, make_plan, moving, partners, plan_cards, record_letter, run,
                             weakness, weakness_parts)
@@ -63,6 +64,14 @@ def selftest():
     full = {c.key: {"streak": MASTER, "wrong": 0} for c in letters}
     assert status(full[pick(full, letters, rng=rng).key]) == "green", "everything learned -> review"
     assert learned(full, letters) == 33 and learned({}, letters) == 0
+    rounds = {"Easy": 0}
+    for i in range(1, KEEP_AFTER + 1):  # completed: counted, starts from zero until the last round
+        prog = {c.key: {"streak": MASTER, "wrong": 0} for c in letters}
+        assert complete_level(prog, rounds, "Easy", letters) and rounds["Easy"] == i
+        assert (prog == {}) == (i < KEEP_AFTER)
+    assert learned(prog, letters) == 33, "after the last round the level stays learned"
+    assert not complete_level(prog, rounds, "Easy", letters) and rounds["Easy"] == KEEP_AFTER, "no more counting"
+    assert not complete_level({}, {"Easy": 0}, "Easy", letters), "not full -> nothing happens"
     # learning data + study plan
     st = {"hist": {}, "conf": {}, "rounds": {}, "plan": [], "lookup": {}}
     assert make_plan(st) == []
@@ -75,19 +84,25 @@ def selftest():
     record_letter(st, "Ы", "И")
     assert st["hist"]["Ш"] == [0, 0, 0] and st["conf"]["Ш"] == {"Щ": 3} and st["hist"]["А"] == [1]
     assert partners(st, "Щ") == ["Ш"]
-    assert round(weakness(st)["Щ"], 6) == .6, "wrongly pressed letter is weighted"
+    assert round(weakness(st)["Щ"], 6) == .3, "wrongly pressed letter is weighted"
     assert [round(x, 6) for x in weakness_parts(st)["Ш"]] == [1, .3, 0, 0, 0, 0]
     assert explain("Щ", weakness_parts(st)["Щ"]) == ("Щ:  error rate 0% (0.00)  +  0× confused (0.00)  +  "
-                                                  "3× wrongly pressed (0.60)  +  0× looked up (0.00)  +  "
-                                                  "0× forgot again (0.00)  +  0× right in a row (0.00)  =  0.60")
+                                                  "3× wrongly pressed (0.30)  +  0× looked up (0.00)  +  "
+                                                  "0× forgot again (0.00)  +  0× right answers (0.00)  =  0.30")
     plan = make_plan(st)
-    assert plan[:2] == ["Ш", "Щ"] and "Ы" in plan and "И" in plan and "А" not in plan, plan
-    # right answers in a row lower the score; a mistake after RELAPSE right counts as "forgot again"
+    assert plan == ["Ш", "Ы", "Щ", "И"], plan  # by score: 1.3, 1.1, 0.3, 0.1
+    # right answers lower the score, a mistake halves that bonus; a mistake after RELAPSE right = "forgot again"
     h = {"hist": {"Ж": [0, 1, 1, 1, 1, 0, 1, 1]}, "conf": {}, "lookup": {}}
-    assert run([1, 0, 1, 1]) == 2 and run([1, 1]) == 2 and run([0]) == 0
-    assert [round(x, 6) for x in weakness_parts(h)["Ж"]] == [.25, 0, 0, 0, .3, -.2]
+    assert run([1, 0, 1, 1]) == 2 and run([1, 1]) == 2 and run([0]) == 0 and run([1] * 10 + [0]) == 5
+    assert [round(x, 6) for x in weakness_parts(h)["Ж"]] == [.25, 0, 0, 0, .2, -.4]
     h["hist"]["Ж"] += [1] * 5
     assert make_plan(h) == [], "enough right answers in a row -> out of the plan"
+    mix = {"hist": {"Л": [0], "П": [0] + [1] * 10}, "conf": {"Л": {"П": 1}}, "lookup": {}}
+    assert make_plan(mix) == ["Л"], "a learned mix-up partner (score <= 0) stays out of the plan"
+    mix["hist"]["П"].append(0)
+    assert make_plan(mix) == ["Л"], "one slip after 10 right answers is not enough to come back"
+    mix["hist"]["П"].append(0)
+    assert set(make_plan(mix)) == {"Л", "П"}, "a second mistake brings it back"
     assert {c.key for c in plan_cards(plan, "Easy")} == set(plan)
     assert all(set(c.key.lower()) & set("шщыи") for c in plan_cards(plan, "Medium"))
     assert plan_cards(["Ъ"], "Hard") == CARDS["Hard"], "no match -> all cards"

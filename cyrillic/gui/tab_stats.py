@@ -8,7 +8,8 @@ from tkinter import font as tkfont, messagebox, ttk
 from cyrillic.data import LETTERS
 from cyrillic.gui.theme import CARD, FG, HOVER, MUTED, OK, SERIES, STYLES, flat_button
 from cyrillic.i18n import _
-from cyrillic.scheduler import BATCH, EXAM_MAX_WRONG, EXAM_QUESTIONS, MASTER, REVIEW_CHANCE, WEIGHT
+from cyrillic.scheduler import (BATCH, EXAM_MAX_PLAN, EXAM_MAX_WRONG, EXAM_QUESTIONS, EXAM_UNLOCK, KEEP_AFTER, MASTER,
+                                REVIEW_CHANCE, WEIGHT)
 from cyrillic.stats import PARTS, PLAN_UNLOCK, RELAPSE, explain, moving, weakness, weakness_parts
 from cyrillic.storage import save_progress
 
@@ -58,9 +59,14 @@ class StatsTab:
         for v, t in (("curve", _("Learning curves")), ("bars", _("Error proneness")), ("help", _("How it works"))):
             ttk.Radiobutton(views, text=t, value=v, variable=self.view, style="Toolbutton",
                             command=self.draw_chart).pack(side="left", padx=(0, 4))
-        self.chart = tk.Canvas(right, bg=CARD, highlightthickness=0, width=560, height=340)
+        self.chart = tk.Canvas(right, bg=CARD, highlightthickness=0, width=560, height=340, yscrollincrement=20)
         self.chart.pack(fill="both", expand=True)
         self.chart.bind("<Configure>", lambda e: self.draw_chart())
+        # scrollbar + mouse wheel, only used when "How it works" is taller than the chart area
+        self.chart_sb = ttk.Scrollbar(right, orient="vertical", command=self.chart.yview)
+        self.chart.configure(yscrollcommand=self.chart_sb.set)
+        for ev, d in (("<Button-4>", -3), ("<Button-5>", 3)):
+            self.chart.bind(ev, lambda e, d=d: self.view.get() == "help" and self.chart.yview_scroll(d, "units"))
         return f
 
     def refresh_stats(self):
@@ -83,7 +89,8 @@ class StatsTab:
         self.lookup_lbl.config(text=_("Looked up: ") + (" · ".join(f"{k} {n}×" for k, n in looked[:8]) or "–"))
         plan = " · ".join(st["plan"])  # reasons per letter: "Error proneness" chart
         self.plan_lbl.config(text=_("Your study plan: {}\n(Reasons: “Error proneness”, hover a bar)").format(plan)
-                             if plan else _("No study plan yet.\n"))
+                             if plan else _("Study plan empty: no letter is above 0 – well done!\n")
+                             if unlocked else _("No study plan yet.\n"))
         self.draw_chart()
 
     def toggle_curve(self, k, draw=True):
@@ -115,6 +122,11 @@ class StatsTab:
             self.refresh_stats()
 
     def draw_chart(self):
+        cv = self.chart
+        if self.view.get() != "help":  # only the help text scrolls
+            self.chart_sb.pack_forget()
+            cv.configure(scrollregion=(0, 0, 0, 0))
+            cv.yview_moveto(0)
         {"bars": self.draw_bars, "help": self.draw_help}.get(self.view.get(), self.draw_curves)()
 
     def draw_help(self):
@@ -127,90 +139,105 @@ class StatsTab:
                 "Answer a card right {} times in a row and it is learned (green); a mistake sets it back to 0 (red). "
                 "At most {} cards are in progress at once, new ones come in order of difficulty. The next card is "
                 "drawn at random, weighted: red {}, yellow/new {}, green {}. Learned cards come back for review "
-                "with a {:.0%} chance. When a whole level is learned it counts +1 and starts again from zero.").format(
-                MASTER, BATCH, WEIGHT["red"], WEIGHT["yellow"], WEIGHT["green"], REVIEW_CHANCE)),
+                "with a {:.0%} chance. When a whole level is learned it counts +1 and starts again from zero – "
+                "the first {} times. After that "
+                "it stays learned (until you reset it in Settings), and you keep working on your weak letters.").format(
+                MASTER, BATCH, WEIGHT["red"], WEIGHT["yellow"], WEIGHT["green"], REVIEW_CHANCE, KEEP_AFTER)),
             (_("Error proneness"), _(
                 "Only questions whose answer is a single letter count. Score per letter:\n• error rate of the "
                 "last 10 answers (0–1)\n• +{} per confusion (asked, another letter chosen)\n• +{} per wrongly pressed "
                 "(chosen, but another letter was right)\n• +{} per look-up in the Reference\n• +{} per “forgot again” "
-                "(a mistake after {} right in a row)\n• {} per right answer in the current run\nA mistake ends the "
-                "run and its bonus.").format(w[1], w[2], w[3], w[4], RELAPSE, w[5])),
+                "(a mistake after {} right in a row)\n• {} per right answer\nA mistake halves the right-answer bonus "
+                "instead of deleting it.").format(w[1], w[2], w[3], w[4], RELAPSE, w[5])),
             (_("Study plan"), _(
                 "Unlocked after completing Easy {} times, then rebuilt after every answer: the letters with a "
-                "score above 0, weakest first, each with the two letters you mix it up with most, about 8 in "
-                "total. With the plan on, Easy asks only these letters, Medium and Hard only words that contain "
-                "one, and the wrong options are your own confusions.").format(PLAN_UNLOCK)),
-            (_("Exam"), _("{} random questions of the level, passed with at most {} mistakes.").format(
-                EXAM_QUESTIONS, EXAM_MAX_WRONG)),
+                "score above 0, weakest first – as many as there are. Once right answers push a letter to 0 or "
+                "below it drops out; when mistakes push it above 0 again, it comes back. An empty plan means no "
+                "letter is weak. With the plan on, Easy asks only these letters, Medium and Hard only words that "
+                "contain one, and the wrong options are your own confusions.").format(PLAN_UNLOCK)),
+            (_("Exam"), _("One exam per level: {} random questions, passed with at most {} mistakes. Unlocked once "
+                          "the level was completed {} times and the study plan has at most {} letter.").format(
+                EXAM_QUESTIONS, EXAM_MAX_WRONG, EXAM_UNLOCK, EXAM_MAX_PLAN)),
         ]
         y, width = 2, cv.winfo_width() - 8
         for head, body in sections:
             y = cv.bbox(cv.create_text(4, y, anchor="nw", fill=FG, font=("Sans", 12, "bold"), text=head))[3] + 2
             y = cv.bbox(cv.create_text(4, y, anchor="nw", fill=FG, font=fnt, width=width, text=body))[3] + 10
+        h = cv.winfo_height()
+        cv.configure(scrollregion=(0, 0, cv.winfo_width(), max(y, h)))
+        if y > h:
+            self.chart_sb.pack(side="right", fill="y", before=cv)
+        else:
+            self.chart_sb.pack_forget()
+            cv.yview_moveto(0)
 
     def draw_bars(self):
         """Error proneness as rows: mistakes to the right of zero, the right-answer bonus to the left,
         a dot at the real score. Hover a row for the breakdown."""
-        cv, fnt, bold = self.chart, tkfont.Font(family="Sans", size=10), ("Sans", 11, "bold")
+        cv, fnt = self.chart, tkfont.Font(family="Sans", size=10)
         cv.delete("all")
         w, h, lh = cv.winfo_width(), cv.winfo_height(), fnt.metrics("linespace")
-        plan = self.stats["plan"]
-        # letters that ever had a mistake; plan letters first (partners can have a low score), then by score
-        rows = sorted(((sum(v), k, v) for k, v in weakness_parts(self.stats).items() if any(x > 0 for x in v)),
-                      key=lambda r: (r[1] in plan, r[0]), reverse=True)
-        cv.create_text(4, 2, anchor="nw", fill=FG, font=("Sans", 12, "bold"),
-                       text=_("Error proneness · ● score  ★ in the study plan  ✓ out of the plan"))
-        x, y = 4, 2 * lh
+        plan, parts, zero = self.stats["plan"], weakness_parts(self.stats), [0.0] * len(PARTS)
+        # all 33 letters, weakest first (= the plan letters on top), ties in alphabet order
+        rows = sorted(((sum(parts.get(l[0], zero)), i, l[0], parts.get(l[0], zero)) for i, l in enumerate(LETTERS)),
+                      key=lambda r: (-r[0], r[1]))
+        title = cv.create_text(4, 2, anchor="nw", fill=FG, font=("Sans", 12, "bold"), width=w - 8,
+                               text=_("Error proneness · ● score  ★ in the study plan  ✓ out of the plan"))
+        x, y = 4, cv.bbox(title)[3] + .4 * lh
         for (name, _wt), col in zip(PARTS, SERIES):  # legend, wraps when out of space
             if x > 4 and x + lh * 1.1 + fnt.measure(name) > w:
                 x, y = 4, y + 1.3 * lh
             cv.create_rectangle(x, y, x + lh * .8, y + .8 * lh, fill=col, width=0)
             cv.create_text(x + lh * 1.1, y + .4 * lh, anchor="w", fill=FG, font=fnt, text=name)
             x += lh * 2.5 + fnt.measure(name)
+        first = next((r for r in rows if any(r[3])), None)
         detail = cv.create_text(4, h - 4, anchor="sw", fill=FG, font=fnt, width=w - 8,
-                                text=explain(rows[0][1], rows[0][2]) if rows else "")
-        if not rows:
-            return cv.create_text(w / 2, h / 2, fill=MUTED, font=("Sans", 13), text=_("No data yet"))
-        y0, y1 = y + 3 * lh, h - 3 * lh  # rows area, detail line below
-        x0, x1 = 3.5 * lh, w - fnt.measure("-0.00 ✓") - 1.5 * lh
-        rh = 1.4 * lh
-        fit = max(1, int((y1 - y0) / rh))
-        more = len(rows) - fit + 1 if len(rows) > fit else 0
-        shown = rows[:fit - 1] if more else rows
-        pos = max(sum(x for x in v if x > 0) for _t, _k, v in rows) or 1
-        neg = max(-sum(x for x in v if x < 0) for _t, _k, v in rows)
-        scale = (x1 - x0) / (pos + neg)
-        zx = x0 + neg * scale
-        cv.create_text(zx + 6, y0 - lh, anchor="w", fill=MUTED, font=fnt, text=_("Mistakes ▶"))
-        if neg:
-            cv.create_text(zx - 6, y0 - lh, anchor="e", fill=MUTED, font=fnt, text=_("◀ Bonus"))
-        for i, (tot, k, v) in enumerate(shown):
-            cy, tag, bar = y0 + rh * (i + .5), f"row{i}", rh * .3
-            bg = cv.create_rectangle(0, cy - rh / 2, w, cy + rh / 2, fill=CARD, width=0, tags=tag)
-            done = tot <= 0 and k not in plan
-            cv.create_text(4, cy, anchor="w", fill=FG, font=bold, text="★" if k in plan else "", tags=tag)
-            cv.create_text(1.6 * lh, cy, anchor="w", fill=MUTED if done else FG, font=bold, text=k, tags=tag)
-            x = zx
-            for val, col in zip(v, SERIES):
-                if val > 0:  # 2 px gap between segments via an outline in the background color
-                    cv.create_rectangle(x, cy - bar, x + val * scale, cy + bar, fill=col, outline=CARD, width=2,
-                                        tags=tag)
-                    x += val * scale
-                elif val < 0:
-                    cv.create_rectangle(zx + val * scale, cy - bar, zx, cy + bar, fill=col, outline=CARD, width=2,
-                                        tags=tag)
-            dx = zx + tot * scale
-            cv.create_oval(dx - .35 * lh, cy - .35 * lh, dx + .35 * lh, cy + .35 * lh, fill=FG, outline=CARD,
-                           width=2, tags=tag)
-            cv.create_text(x1 + lh, cy, anchor="w", fill=OK if done else FG, font=fnt,
-                           text=f"{tot:.2f}" + ("  ✓" if done else ""), tags=tag)
-            cv.tag_bind(tag, "<Enter>", lambda e, k=k, v=v, bg=bg: (cv.itemconfig(detail, text=explain(k, v)),
-                                                                     cv.itemconfig(bg, fill=HOVER)))
-            cv.tag_bind(tag, "<Leave>", lambda e, bg=bg: cv.itemconfig(bg, fill=CARD))
-        cv.create_line(zx, y0 - .3 * lh, zx, y0 + rh * len(shown), fill=MUTED)
-        if more:
-            cv.create_text(1.6 * lh, y0 + rh * (len(shown) + .5), anchor="w", fill=MUTED, font=fnt,
-                           text=_("+{} more").format(more))
+                                text=explain(first[2], first[3]) if first else "")
+        # one column if all 33 fit, otherwise two (more would leave no room for the bars); rows and font shrink
+        y0, y1 = y + 3 * lh, cv.bbox(detail)[1] - .4 * lh if first else h - lh  # rows area, detail text below
+        cols = 1 if (y1 - y0) / len(rows) >= 1.25 * lh else 2
+        per = math.ceil(len(rows) / cols)
+        rh, cw = min(1.6 * lh, (y1 - y0) / per), w / cols
+        small = rh < 1.25 * lh
+        bold, vfnt = ("Sans", 9 if small else 11, "bold"), ("Sans", 9) if small else fnt
+        valw = fnt.measure("-0.00 ✓") + 1.5 * lh
+        pos = max(sum(x for x in v if x > 0) for *_r, v in rows)
+        neg = max(-sum(x for x in v if x < 0) for *_r, v in rows)
+        scale = (cw - 3.5 * lh - valw - lh) / ((pos + neg) or 1)
+        for c in range(cols):
+            zx = c * cw + 3.5 * lh + neg * scale
+            cv.create_text(zx + 6, y0 - lh, anchor="w", fill=MUTED, font=fnt, text=_("Mistakes ▶"))
+            if neg:
+                cv.create_text(zx - 6, y0 - lh, anchor="e", fill=MUTED, font=fnt, text=_("◀ Bonus"))
+            col_rows = rows[c * per:(c + 1) * per]
+            cv.create_line(zx, y0 - .3 * lh, zx, y0 + rh * len(col_rows), fill=MUTED)
+            for i, (tot, _i, k, v) in enumerate(col_rows):
+                cy, tag, bar, left = y0 + rh * (i + .5), f"row{k}", rh * .3, c * cw
+                bg = cv.create_rectangle(left, cy - rh / 2, left + cw, cy + rh / 2, fill=CARD, width=0, tags=tag)
+                cv.tag_lower(bg)  # behind the zero line
+                has = any(v)
+                done = has and tot <= 0 and k not in plan
+                cv.create_text(left + 4, cy, anchor="w", fill=FG, font=bold, text="★" if k in plan else "", tags=tag)
+                cv.create_text(left + 1.6 * lh, cy, anchor="w", fill=FG if has and not done else MUTED, font=bold,
+                               text=k, tags=tag)
+                x = zx
+                for val, col in zip(v, SERIES):
+                    if val > 0:  # 2 px gap between segments via an outline in the background color
+                        cv.create_rectangle(x, cy - bar, x + val * scale, cy + bar, fill=col, outline=CARD, width=2,
+                                            tags=tag)
+                        x += val * scale
+                    elif val < 0:
+                        cv.create_rectangle(zx + val * scale, cy - bar, zx, cy + bar, fill=col, outline=CARD,
+                                            width=2, tags=tag)
+                if has:
+                    dx, r = zx + tot * scale, min(.35 * lh, rh * .35)
+                    cv.create_oval(dx - r, cy - r, dx + r, cy + r, fill=FG, outline=CARD, width=2, tags=tag)
+                cv.create_text(left + cw - valw, cy, anchor="w", fill=OK if done else FG if has else MUTED, font=vfnt,
+                               text=(f"{tot:.2f}" + ("  ✓" if done else "")) if has else "–", tags=tag)
+                if has:
+                    cv.tag_bind(tag, "<Enter>", lambda e, k=k, v=v, bg=bg: (
+                        cv.itemconfig(detail, text=explain(k, v)), cv.itemconfig(bg, fill=HOVER)))
+                    cv.tag_bind(tag, "<Leave>", lambda e, bg=bg: cv.itemconfig(bg, fill=CARD))
 
     def draw_curves(self):
         """Learning curves: moving hit rate (5 attempts) per selected letter."""

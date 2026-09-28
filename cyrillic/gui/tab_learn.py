@@ -10,7 +10,8 @@ from tkinter import font as tkfont, messagebox, ttk
 from cyrillic.gui.theme import ACCENT, BAD, BG, CARD, FG, HOVER, MUTED, OK, STATUS_TXT, flat_button
 from cyrillic.i18n import LANG, _
 from cyrillic.questions import CARDS, LEVEL_TXT, QTYPES, question
-from cyrillic.scheduler import EXAM_MAX_WRONG, EXAM_QUESTIONS, MASTER, learned, pick, record, status
+from cyrillic.scheduler import (EXAM_MAX_PLAN, EXAM_MAX_WRONG, EXAM_QUESTIONS, EXAM_UNLOCK, MASTER, complete_level,
+                                pick, record, status)
 from cyrillic.sound import fanfare
 from cyrillic.stats import PLAN_UNLOCK, SOUND_KEY, make_plan, partners, plan_cards, record_letter
 from cyrillic.storage import save_progress
@@ -46,12 +47,19 @@ class LearnTab:
         self.feedback = ttk.Label(f, font=("Sans", 16), style="Card.TLabel", wraplength=900, justify="center")
         self.feedback.pack()
         f.bind("<Configure>", lambda e: [w.config(wraplength=e.width - 80) for w in (self.q_lbl, self.feedback)])
+        # fixed cells, so the buttons keep the same size for every level and question type:
+        # full width, as high as a letter button (28 pt)
         opt_frame = ttk.Frame(f, style="Card.TFrame")
-        opt_frame.pack(pady=15)
+        opt_frame.pack(pady=15, fill="x")
+        row_h = tkfont.Font(family="Sans", size=28).metrics("linespace") + 2 * 12 + 20
+        for i in range(2):
+            opt_frame.columnconfigure(i, weight=1, uniform="opt")
+            opt_frame.rowconfigure(i, minsize=row_h, uniform="opt")
         self.opt_btns = []
         for i in range(4):
-            b = flat_button(opt_frame, width=30, wraplength=380, pady=12, bg=HOVER, activebackground=ACCENT)
-            b.grid(row=i // 2, column=i % 2, padx=6, pady=6)
+            b = flat_button(opt_frame, width=1, pady=12, bg=HOVER, activebackground=ACCENT)
+            b.grid(row=i // 2, column=i % 2, padx=6, pady=6, sticky="nsew")
+            b.bind("<Configure>", lambda e: e.widget.config(wraplength=e.width - 30))
             self.opt_btns.append(b)
         self.update_exam_btn()
         self.update_plan_cb()
@@ -59,9 +67,19 @@ class LearnTab:
         return f
 
     def update_exam_btn(self):
-        n = min(EXAM_QUESTIONS, len(CARDS[self.level.get()]))
-        self.exam_btn.config(text=_("Cancel exam") if self.exam else
-                             _("Exam ({} questions, max. {} mistakes)").format(n, EXAM_MAX_WRONG))
+        lv = self.level.get()
+        n = min(EXAM_QUESTIONS, len(CARDS[lv]))
+        done, plan = self.stats["rounds"][lv], len(self.stats["plan"])
+        if self.exam:
+            text, ok = _("Cancel exam"), True
+        elif done < EXAM_UNLOCK:
+            text, ok = _("Exam (after {}× {}, {}/{})").format(EXAM_UNLOCK, _(lv), done, EXAM_UNLOCK), False
+        elif plan > EXAM_MAX_PLAN:
+            text, ok = _("Exam (study plan max. {} letter, now {})").format(EXAM_MAX_PLAN, plan), False
+        else:
+            text, ok = _("Exam ({} questions, max. {} mistakes)").format(n, EXAM_MAX_WRONG), True
+        self.exam_btn.config(text=text)
+        self.exam_btn.state(["!disabled"] if ok else ["disabled"])
 
     def update_plan_cb(self):
         """Rebuild the study plan from the current learning data (after every answer) and update the checkbox."""
@@ -76,6 +94,7 @@ class LearnTab:
         self.plan_cb.state(["!disabled"] if ok else ["disabled"])
         if not ok:
             self.use_plan.set(False)
+        self.update_exam_btn()  # the exam depends on the plan size
 
     def change_level(self):
         self.exam = None
@@ -147,11 +166,8 @@ class LearnTab:
         if self.qtype in ("sound", "letter", "spell"):  # answers that are clearly a single letter
             key = {"sound": SOUND_KEY.get, "letter": lambda x: x[0], "spell": str.upper}[self.qtype]
             record_letter(self.stats, key(self.right), key(o))
-        # no "was it full before?" check: a level saved full by an older version must reset too
-        if learned(self.progress[lv], CARDS[lv]) == len(CARDS[lv]):
+        if complete_level(self.progress[lv], self.stats["rounds"], lv, CARDS[lv]):
             self.after(900, lambda: self.celebrate(lv))
-            self.stats["rounds"][lv] += 1
-            self.progress[lv].clear()  # level done -> count it and start again from zero
         self.update_plan_cb()
         save_progress(self.progress)
         self.opts[self.right].config(bg=OK)

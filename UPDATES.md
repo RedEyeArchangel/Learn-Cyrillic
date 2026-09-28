@@ -1,6 +1,15 @@
 # Updates
 
 ## 2026-09-29
+- Fixed: "How it works" scrolls (scrollbar + mouse wheel) when the text is taller than the window; the exam section was cut off.
+- Changed: README – repository links filled in, releases link, study-plan text and screenshots updated.
+- Changed: an empty study plan (all letters at 0 or below) now says so instead of "No study plan yet".
+- Changed: gentler scoring – a mistake halves the right-answer bonus instead of deleting it, "wrongly pressed" weighs 0.1 (was 0.2) and "forgot again" 0.2 (was 0.3); the part is now called "Right answers".
+- Changed: the error-proneness chart shows all 33 letters (two columns when space is short; letters without data show "–"); the title wraps in narrow windows.
+- Fixed: the four answer buttons keep the same size on every level and question type (full width, letter height).
+- Changed: after a level was completed 3 times it stays learned instead of starting from zero again; only the reset button in Settings clears it.
+- Changed: the exam of a level unlocks only after the level was completed 3 times and the study plan has at most 1 letter; the button shows what is still missing.
+- Changed: the study plan holds exactly the letters with a score above 0 (no fixed size, no mix-up partners that are already learned); a new mistake brings a letter back.
 - Added: GitHub Actions workflow that creates a release automatically when a `v*` tag is pushed (tag message = release notes).
 - Changed: README screenshots retaken for the current version; added screenshots of the "How it works" view and the Settings tab.
 - Changed: error-proneness chart redesigned as rows: mistakes to the right, right-answer bonus to the left, a dot at the real score, ★ for study-plan letters and ✓ for letters out of the plan.

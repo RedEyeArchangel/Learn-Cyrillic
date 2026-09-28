@@ -59,6 +59,8 @@ DE = {
     "🔊 Listen again": "🔊 Nochmal hören",
     "Cancel exam": "Prüfung abbrechen",
     "Exam ({} questions, max. {} mistakes)": "Prüfung ({} Fragen, max. {} Fehler)",
+    "Exam (after {}× {}, {}/{})": "Prüfung (nach {}× {}, {}/{})",
+    "Exam (study plan max. {} letter, now {})": "Prüfung (Lernplan max. {} Buchstabe, jetzt {})",
     "Study plan": "Lernplan",
     "Study plan (after {}× Easy, {}/{})": "Lernplan (nach {}× Leicht, {}/{})",
     "Study plan (no weak letters)": "Lernplan (keine schwachen Buchstaben)",
@@ -103,13 +105,14 @@ DE = {
     "Your study plan: {}\n(Reasons: “Error proneness”, hover a bar)":
         "Dein Lernplan: {}\n(Gründe: „Fehleranfälligkeit“, Maus über einen Balken)",
     "No study plan yet.\n": "Noch kein Lernplan.\n",
+    "Study plan empty: no letter is above 0 – well done!\n":
+        "Lernplan leer: kein Buchstabe liegt über 0 – gut gemacht!\n",
     "Delete learning curves, confusions, lookups and the study plan?\n(“Easy fully learned” is kept.)":
         "Lernkurven, Verwechslungen, Nachschlagen und Lernplan löschen?\n(„Leicht komplett gelernt“ bleibt.)",
     "Error proneness · ● score  ★ in the study plan  ✓ out of the plan":
         "Fehleranfälligkeit · ● Wert  ★ im Lernplan  ✓ raus aus dem Lernplan",
     "Mistakes ▶": "Fehler ▶",
     "◀ Bonus": "◀ Bonus",
-    "+{} more": "+{} weitere",
     "No data yet": "Noch keine Daten",
     "Learning curve · hit rate (average of the last 5 attempts)":
         "Lernkurve · Trefferquote (Mittel der letzten 5 Versuche)",
@@ -120,38 +123,46 @@ DE = {
     "Wrongly pressed": "Falsch gedrückt",
     "Looked up": "Nachgeschlagen",
     "Forgot again": "Wieder vergessen",
-    "Right in a row": "Richtig in Folge",
+    "Right answers": "Richtige Antworten",
     "How it works": "So funktioniert’s",
     "Learning a card": "Eine Karte lernen",
     "Answer a card right {} times in a row and it is learned (green); a mistake sets it back to 0 (red). "
     "At most {} cards are in progress at once, new ones come in order of difficulty. The next card is "
     "drawn at random, weighted: red {}, yellow/new {}, green {}. Learned cards come back for review "
-    "with a {:.0%} chance. When a whole level is learned it counts +1 and starts again from zero.":
+    "with a {:.0%} chance. When a whole level is learned it counts +1 and starts again from zero – "
+    "the first {} times. After that "
+    "it stays learned (until you reset it in Settings), and you keep working on your weak letters.":
         "Beantworte eine Karte {}-mal in Folge richtig, dann ist sie gelernt (grün); ein Fehler setzt sie auf 0 "
         "zurück (rot). Höchstens {} Karten sind gleichzeitig in Arbeit, neue kommen nach Schwierigkeit dazu. Die "
         "nächste Karte wird zufällig gezogen, gewichtet: rot {}, gelb/neu {}, grün {}. Gelernte Karten kommen mit "
         "{:.0%} Wahrscheinlichkeit zur Wiederholung. Ist eine ganze Stufe gelernt, zählt sie +1 und beginnt "
-        "wieder bei null.",
+        "wieder bei null – die ersten {}-mal. Danach bleibt sie gelernt (bis du sie in den Einstellungen "
+        "zurücksetzt), und du arbeitest weiter an deinen schwachen Buchstaben.",
     "Only questions whose answer is a single letter count. Score per letter:\n• error rate of the "
     "last 10 answers (0–1)\n• +{} per confusion (asked, another letter chosen)\n• +{} per wrongly pressed "
     "(chosen, but another letter was right)\n• +{} per look-up in the Reference\n• +{} per “forgot again” "
-    "(a mistake after {} right in a row)\n• {} per right answer in the current run\nA mistake ends the "
-    "run and its bonus.":
+    "(a mistake after {} right in a row)\n• {} per right answer\nA mistake halves the right-answer bonus "
+    "instead of deleting it.":
         "Es zählen nur Fragen, deren Antwort ein einzelner Buchstabe ist. Wert pro Buchstabe:\n• Fehlerquote der "
         "letzten 10 Antworten (0–1)\n• +{} pro Verwechslung (gefragt, anderer Buchstabe gewählt)\n• +{} pro falsch "
         "gedrückt (gewählt, aber ein anderer war richtig)\n• +{} pro Nachschlagen im Tab „Nachschlagen“\n• +{} pro "
-        "„wieder vergessen“ (ein Fehler nach {} richtigen in Folge)\n• {} pro richtiger Antwort in der aktuellen "
-        "Serie\nEin Fehler beendet die Serie und ihren Bonus.",
-    "Unlocked after completing Easy {} times, then rebuilt after every answer: the letters with a "
-    "score above 0, weakest first, each with the two letters you mix it up with most, about 8 in "
-    "total. With the plan on, Easy asks only these letters, Medium and Hard only words that contain "
-    "one, and the wrong options are your own confusions.":
+        "„wieder vergessen“ (ein Fehler nach {} richtigen in Folge)\n• {} pro richtiger Antwort\nEin Fehler "
+        "halbiert den Bonus für richtige Antworten, statt ihn zu löschen.",
+    "Unlocked after completing Easy {} times, then rebuilt after every answer: the letters with a score above 0, "
+    "weakest first – as many as there are. Once right answers push a letter to 0 or below it drops out; when "
+    "mistakes push it above 0 again, it comes back. An empty plan means no letter is weak. With the plan on, Easy"
+    " asks only these letters, Medium and Hard only words that contain one, and the wrong options are your own "
+    "confusions.":
         "Freigeschaltet nach {}× Leicht komplett, danach nach jeder Antwort neu erstellt: die Buchstaben mit "
-        "einem Wert über 0, die schwächsten zuerst, jeweils mit den zwei Buchstaben, die du am häufigsten damit "
-        "verwechselst, etwa 8 insgesamt. Mit Lernplan fragt Leicht nur diese Buchstaben, Mittel und Schwer nur "
-        "Wörter, die einen davon enthalten, und die falschen Antworten sind deine eigenen Verwechslungen.",
-    "{} random questions of the level, passed with at most {} mistakes.":
-        "{} zufällige Fragen der Stufe, bestanden mit höchstens {} Fehlern.",
+        "einem Wert über 0, die schwächsten zuerst – so viele, wie es gibt. Drücken richtige Antworten einen "
+        "Buchstaben auf 0 oder darunter, fällt er raus; drücken Fehler ihn wieder über 0, kommt er zurück. Ein "
+        "leerer Lernplan heißt: kein Buchstabe ist schwach. Mit Lernplan fragt Leicht nur diese Buchstaben, "
+        "Mittel und Schwer nur Wörter, die einen davon enthalten, und die falschen Antworten sind deine eigenen "
+        "Verwechslungen.",
+    "One exam per level: {} random questions, passed with at most {} mistakes. Unlocked once "
+    "the level was completed {} times and the study plan has at most {} letter.":
+        "Eine Prüfung pro Stufe: {} zufällige Fragen, bestanden mit höchstens {} Fehlern. Freigeschaltet, "
+        "sobald die Stufe {}-mal geschafft ist und der Lernplan höchstens {} Buchstaben hat.",
     "error rate {:.0%} ({:.2f})": "Fehlerquote {:.0%} ({:.2f})",
     # --- letter groups ---
     "Same look, same sound": "Gleiches Aussehen, gleicher Laut",
