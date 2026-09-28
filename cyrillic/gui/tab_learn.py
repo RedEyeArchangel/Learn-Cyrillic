@@ -12,7 +12,7 @@ from cyrillic.i18n import LANG, _
 from cyrillic.questions import CARDS, LEVEL_TXT, QTYPES, question
 from cyrillic.scheduler import EXAM_MAX_WRONG, EXAM_QUESTIONS, MASTER, learned, pick, record, status
 from cyrillic.sound import fanfare
-from cyrillic.stats import PLAN_UNLOCK, SOUND_KEY, partners, plan_cards, record_letter
+from cyrillic.stats import PLAN_UNLOCK, SOUND_KEY, make_plan, partners, plan_cards, record_letter
 from cyrillic.storage import save_progress
 
 
@@ -64,12 +64,15 @@ class LearnTab:
                              _("Exam ({} questions, max. {} mistakes)").format(n, EXAM_MAX_WRONG))
 
     def update_plan_cb(self):
+        """Rebuild the study plan from the current learning data (after every answer) and update the checkbox."""
         done = self.stats["rounds"]["Easy"]
+        if done >= PLAN_UNLOCK:
+            self.stats["plan"] = make_plan(self.stats)
         ok = done >= PLAN_UNLOCK and self.stats["plan"]
         self.plan_cb.config(text=_("Study plan") if ok else
                             _("Study plan (after {}× Easy, {}/{})").format(PLAN_UNLOCK, min(done, PLAN_UNLOCK),
                                                                            PLAN_UNLOCK)
-                            if done < PLAN_UNLOCK else _("Study plan (create it under Learning data)"))
+                            if done < PLAN_UNLOCK else _("Study plan (no weak letters)"))
         self.plan_cb.state(["!disabled"] if ok else ["disabled"])
         if not ok:
             self.use_plan.set(False)
@@ -140,17 +143,16 @@ class LearnTab:
         self.answered = True
         c, lv = self.card, self.level.get()
         correct = o == self.right
-        before = learned(self.progress[lv], CARDS[lv])
         record(self.progress[lv], c.key, correct)
         if self.qtype in ("sound", "letter", "spell"):  # answers that are clearly a single letter
             key = {"sound": SOUND_KEY.get, "letter": lambda x: x[0], "spell": str.upper}[self.qtype]
             record_letter(self.stats, key(self.right), key(o))
-        if before < len(CARDS[lv]) == learned(self.progress[lv], CARDS[lv]):
+        # no "was it full before?" check: a level saved full by an older version must reset too
+        if learned(self.progress[lv], CARDS[lv]) == len(CARDS[lv]):
             self.after(900, lambda: self.celebrate(lv))
             self.stats["rounds"][lv] += 1
             self.progress[lv].clear()  # level done -> count it and start again from zero
-            if lv == "Easy":
-                self.update_plan_cb()
+        self.update_plan_cb()
         save_progress(self.progress)
         self.opts[self.right].config(bg=OK)
         detail = c.info if lv == "Easy" else f"{c.show}  =  {c.answer}  ·  {c.meaning}"

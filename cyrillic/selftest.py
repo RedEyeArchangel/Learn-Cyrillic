@@ -16,7 +16,7 @@ from cyrillic.i18n import DE
 from cyrillic.questions import CARDS, QTYPES, question, translit
 from cyrillic.scheduler import BATCH, MASTER, learned, pick, record, status
 from cyrillic.sound import fanfare
-from cyrillic.stats import (HIST_MAX, SOUND_KEY, explain, make_plan, moving, partners, plan_cards, record_letter,
+from cyrillic.stats import (HIST_MAX, SOUND_KEY, explain, make_plan, moving, partners, plan_cards, record_letter, run,
                             weakness, weakness_parts)
 from cyrillic.storage import normalize
 
@@ -76,11 +76,18 @@ def selftest():
     assert st["hist"]["Ш"] == [0, 0, 0] and st["conf"]["Ш"] == {"Щ": 3} and st["hist"]["А"] == [1]
     assert partners(st, "Щ") == ["Ш"]
     assert round(weakness(st)["Щ"], 6) == .6, "wrongly pressed letter is weighted"
-    assert [round(x, 6) for x in weakness_parts(st)["Ш"]] == [1, .3, 0, 0]
+    assert [round(x, 6) for x in weakness_parts(st)["Ш"]] == [1, .3, 0, 0, 0, 0]
     assert explain("Щ", weakness_parts(st)["Щ"]) == ("Щ:  error rate 0% (0.00)  +  0× confused (0.00)  +  "
-                                                  "3× wrongly pressed (0.60)  +  0× looked up (0.00)  =  0.60")
+                                                  "3× wrongly pressed (0.60)  +  0× looked up (0.00)  +  "
+                                                  "0× forgot again (0.00)  +  0× right in a row (0.00)  =  0.60")
     plan = make_plan(st)
     assert plan[:2] == ["Ш", "Щ"] and "Ы" in plan and "И" in plan and "А" not in plan, plan
+    # right answers in a row lower the score; a mistake after RELAPSE right counts as "forgot again"
+    h = {"hist": {"Ж": [0, 1, 1, 1, 1, 0, 1, 1]}, "conf": {}, "lookup": {}}
+    assert run([1, 0, 1, 1]) == 2 and run([1, 1]) == 2 and run([0]) == 0
+    assert [round(x, 6) for x in weakness_parts(h)["Ж"]] == [.25, 0, 0, 0, .3, -.2]
+    h["hist"]["Ж"] += [1] * 5
+    assert make_plan(h) == [], "enough right answers in a row -> out of the plan"
     assert {c.key for c in plan_cards(plan, "Easy")} == set(plan)
     assert all(set(c.key.lower()) & set("шщыи") for c in plan_cards(plan, "Medium"))
     assert plan_cards(["Ъ"], "Hard") == CARDS["Hard"], "no match -> all cards"

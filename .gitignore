@@ -10,4 +10,5 @@ cyrillic-progress-*.json
 # Claude working files (local only)
 CLAUDE.md
 MEMORY.md
+GIT-COMMANDS.md
 .claude/

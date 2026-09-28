@@ -37,15 +37,20 @@ Every letter answer is recorded, so you can see how you actually learn:
 
 - **Learning curves** per letter (hit rate over the last 5 attempts) – pick single letters or show all 33
 - **Confusions:** which letter you mixed up with which, and how often
-- **Error proneness:** a stacked bar per letter showing exactly how its weight is made up –
-  recent error rate, times confused, times *wrongly pressed*, and times looked up in the reference.
-  Hover a bar for the full breakdown.
+- **Error proneness:** one row per letter you ever got wrong, study-plan letters (★) on top. Mistakes grow to
+  the right – recent error rate, times confused, times *wrongly pressed*, times looked up in the reference and times
+  *forgot again* (a mistake after 4 right in a row). Right answers in a row grow to the left in green, and a dot
+  marks the real score. Letters that dropped out of the plan get a ✓. Hover a row for the full breakdown.
+- **How it works:** explains the learning algorithm, all weights, the study plan and the exam.
 
 ![Learning curves](docs/screenshots/stats-curves.png)
 
+![How it works](docs/screenshots/stats-help.png)
+
 ### Personal study plan
-After you have completed the Easy level (all letters learned) **three times**, there is enough data to create a
-personal study plan: your weakest letters plus the letters you confuse them with. With the plan active,
+After you have completed the Easy level (all letters learned) **three times**, there is enough data for a
+personal study plan: your weakest letters plus the letters you confuse them with. The plan updates itself after
+every answer – letters you now get right drop out, letters you forget again come back. With the plan active,
 the quiz asks only those letters, uses your own confusions as wrong answers, and on the word and sentence
 levels picks words that contain them.
 
