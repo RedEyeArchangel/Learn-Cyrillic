@@ -1,6 +1,7 @@
 # Updates
 
 ## 2026-09-28
+- Added: README "Run" section (activate the venv, start with `./learn_cyrillic.py`).
 - Changed: README describes the Settings tab, German version and completed rounds.
 - Fixed: English щ pronunciation is "sh" (long, soft), not "shch"; transliteration stays "shch".
 - Fixed: README merge conflict (kept the full README).

@@ -91,12 +91,26 @@ python3 -m venv .venv
 .venv/bin/python learn_cyrillic.py
 ```
 
+### Run
+
+From the project folder:
+
+```sh
+source .venv/bin/activate   # only if you set up the better voice
+./learn_cyrillic.py
+```
+
+`./learn_cyrillic.py` uses whichever `python3` is active, so with the venv activated you get the Piper
+voice, without it the system voice. Without activating, `.venv/bin/python learn_cyrillic.py` does the same
+in one line. `deactivate` leaves the venv again.
+
+Self-test: `./learn_cyrillic.py --test` (prints `ok`).
+
 ## Usage notes
 
 - Progress is saved automatically to `~/.local/share/learn-cyrillic/progress.json`, language and voice to
   `settings.json` in the same folder (not part of export/import).
 - The reset buttons in Settings reset one level (learning data is kept) or only the learning data.
-- Self-test: `python3 learn_cyrillic.py --test`
 
 ## Project structure
 
