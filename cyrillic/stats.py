@@ -30,22 +30,25 @@ def partners(stats, k):
     return [x for x, n in cnt.most_common() if n and x != k]
 
 
-# Components of error proneness (name, weight per event). A wrongly pressed letter counts double
-# (like a mistake + a confusion for the letter that was asked). Every right answer in the current run
-# lowers the score; a mistake ends the run, and after RELAPSE right in a row it counts as "forgot again".
+# Components of error proneness (name, weight per event). Every right answer lowers the score; a mistake
+# halves that bonus instead of deleting it, so one slip does not undo everything. A mistake after RELAPSE right
+# in a row also counts as "forgot again".
 # ponytail: counts never age; count only the last N events if that becomes a problem
-PARTS = [(_("Error rate (last 10)"), None), (_("Confused"), .1), (_("Wrongly pressed"), .2), (_("Looked up"), .1),
-         (_("Forgot again"), .3), (_("Right in a row"), -.1)]
+PARTS = [(_("Error rate (last 10)"), None), (_("Confused"), .1), (_("Wrongly pressed"), .1), (_("Looked up"), .1),
+         (_("Forgot again"), .2), (_("Right answers"), -.1)]
 RELAPSE = 4
 
 
 def run(h):
-    """Right answers in a row at the end of the history."""
-    return h[::-1].index(0) if 0 in h else len(h)
+    """Right-answer bonus: +1 per right answer, a mistake halves it."""
+    n = 0
+    for x in h:
+        n = n + 1 if x else n // 2
+    return n
 
 
 def weakness_parts(stats):
-    """letter -> [error rate, confused, wrongly pressed, looked up, forgot again, right in a row], weighted."""
+    """letter -> [error rate, confused, wrongly pressed, looked up, forgot again, right answers], weighted."""
     parts = {}
 
     def add(k, i, v):
@@ -76,14 +79,9 @@ def explain(k, v):
     return f"{k}:  " + "  +  ".join(txt) + f"  =  {sum(v):.2f}"
 
 
-def make_plan(stats, n=8):
-    """Weakest letters, each with its two most frequent mix-ups."""
-    plan = []
-    for k, score in weakness(stats).most_common():
-        if score <= 0 or len(plan) >= n:
-            break
-        plan += [x for x in [k] + partners(stats, k)[:2] if x not in plan]
-    return plan
+def make_plan(stats):
+    """Every letter with a score above 0, weakest first: learned letters drop out, forgotten ones come back."""
+    return [k for k, score in weakness(stats).most_common() if score > 0]
 
 
 def plan_cards(plan, lv):

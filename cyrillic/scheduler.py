@@ -11,6 +11,8 @@ MASTER = 3
 BATCH = 5
 REVIEW_CHANCE = 0.15
 EXAM_QUESTIONS, EXAM_MAX_WRONG = 20, 2
+KEEP_AFTER = 3  # after this many completed rounds a level stays learned (reset only in Settings)
+EXAM_UNLOCK, EXAM_MAX_PLAN = 3, 1  # exam only after the level was completed 3× and the plan is (almost) empty
 WEIGHT = {"red": 3, "yellow": 2, "new": 2, "green": 1}
 
 
@@ -41,3 +43,14 @@ def pick(progress, cards, last=None, rng=random):
 
 def learned(progress, cards):
     return sum(status(progress.get(c.key)) == "green" for c in cards)
+
+
+def complete_level(progress, rounds, lv, cards):
+    """Count a fully learned level. It starts again from zero until KEEP_AFTER rounds are done, then it stays
+    learned. True = just completed (celebrate)."""
+    if learned(progress, cards) < len(cards) or rounds[lv] >= KEEP_AFTER:
+        return False
+    rounds[lv] += 1
+    if rounds[lv] < KEEP_AFTER:
+        progress.clear()
+    return True

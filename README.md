@@ -22,11 +22,12 @@ Multiple-choice quiz that works like a driving-school theory app: every card has
 **three times in a row** to count as learned; a mistake resets the streak. New cards are introduced in
 small batches, easiest first, learned ones come back now and then for review.
 
-- **Three levels:** Easy – letters (sound ↔ letter), Medium – words (read, write, meaning, translate, missing letter, listen) and
-  Hard – sentences (read, write, meaning, translate, missing word, listen)
+- **Three levels:** Easy – letters (sound ↔ letter), Medium – words (read, write, meaning, translate, missing
+  letter, listen) and Hard – sentences (read, write, meaning, translate, missing word, listen)
 - **Transliteration** in a simple English style (zh, kh, ts, ch, sh, shch, ya, yu …)
 - **Smart distractors:** similar-looking letters, typical misreadings and spelling mix-ups
-- **Exam mode:** 20 questions, at most 2 mistakes
+- **Exam mode:** one exam per level, 20 questions, at most 2 mistakes – unlocked once the level was completed
+  3 times and the study plan has at most 1 letter
 - **Listen only:** train purely by ear (words and sentences)
 - **Study plan mode:** practice only your weak letters (see below)
 
@@ -37,10 +38,11 @@ Every letter answer is recorded, so you can see how you actually learn:
 
 - **Learning curves** per letter (hit rate over the last 5 attempts) – pick single letters or show all 33
 - **Confusions:** which letter you mixed up with which, and how often
-- **Error proneness:** one row per letter you ever got wrong, study-plan letters (★) on top. Mistakes grow to
-  the right – recent error rate, times confused, times *wrongly pressed*, times looked up in the reference and times
-  *forgot again* (a mistake after 4 right in a row). Right answers in a row grow to the left in green, and a dot
-  marks the real score. Letters that dropped out of the plan get a ✓. Hover a row for the full breakdown.
+- **Error proneness:** one row for each of the 33 letters, weakest first, study-plan letters (★) on top. Mistakes
+  grow to the right – recent error rate, times confused, times *wrongly pressed*, times looked up in the reference
+  and times *forgot again* (a mistake after 4 right in a row). Right answers grow to the left in green (a mistake
+  halves that bonus), and a dot marks the real score. Letters that dropped out of the plan get a ✓. Hover a row
+  for the full breakdown.
 - **How it works:** explains the learning algorithm, all weights, the study plan and the exam.
 
 ![Learning curves](docs/screenshots/stats-curves.png)
@@ -49,8 +51,9 @@ Every letter answer is recorded, so you can see how you actually learn:
 
 ### Personal study plan
 After you have completed the Easy level (all letters learned) **three times**, there is enough data for a
-personal study plan: your weakest letters plus the letters you confuse them with. The plan updates itself after
-every answer – letters you now get right drop out, letters you forget again come back. With the plan active,
+personal study plan: every letter whose score is above 0, as many as there are. The plan updates itself after
+every answer – once right answers push a letter to 0 or below it drops out, and when mistakes push it above 0
+again it comes back. An empty plan means no letter is weak right now. With the plan active,
 the quiz asks only those letters, uses your own confusions as wrong answers, and on the word and sentence
 levels picks words that contain them.
 
@@ -63,8 +66,9 @@ study plan.
 
 ### Completed rounds
 When every card of a level is learned (e.g. 33/33 letters), the level counts as completed once and its
-progress starts again from zero. The status bar shows how often each level was completed
-(e.g. *Completed: Easy 2× · Medium 1× · Hard 0×*).
+progress starts again from zero – the first 3 times. After the third round the level stays learned, so you can
+keep working on your weak letters (study plan); only the reset button in Settings starts it from zero again.
+The status bar shows how often each level was completed (e.g. *Completed: Easy 3× · Medium 1× · Hard 0×*).
 
 ### Settings
 - **Language:** English or German (Deutsch) – the whole app including meanings and pronunciation hints.
@@ -78,11 +82,13 @@ progress starts again from zero. The status bar shows how often each level was c
 
 ## Installation
 
+Ready-made versions are listed under [Releases](https://github.com/RedEyeArchangel/Learn-Cyrillic/releases).
+
 Requires Python ≥ 3.8 with tkinter (`sudo apt install python3-tk` on Debian/Ubuntu).
 
 ```sh
-git clone https://github.com/RedEyeArchangel/<repository>.git
-cd <repository>
+git clone https://github.com/RedEyeArchangel/Learn-Cyrillic.git
+cd Learn-Cyrillic
 python3 learn_cyrillic.py
 ```
 
@@ -126,7 +132,7 @@ learn_cyrillic.py          entry point
 cyrillic/
   data.py                  alphabet, words, sentences, sounds
   questions.py             transliteration, cards, quiz questions
-  scheduler.py             streaks, status, next card
+  scheduler.py             streaks, status, next card, completed rounds, exam unlock
   stats.py                 history, confusions, error proneness, study plan
   storage.py               load / validate / save progress
   settings.py              language and voice settings
@@ -149,7 +155,7 @@ Licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4
 - **Non-commercial use only.**
 - **Attribution required:** if you use this project or parts of it as a basis for your own work, you must
   credit it, for example:
-  > Based on "Learn Cyrillic" by RedEyeArchangel (https://github.com/RedEyeArchangel/&lt;repository&gt;),
+  > Based on "Learn Cyrillic" by RedEyeArchangel (https://github.com/RedEyeArchangel/Learn-Cyrillic),
   > licensed under CC BY-NC-SA 4.0.
 - **Share alike:** derived works must be released under the same license.
 
