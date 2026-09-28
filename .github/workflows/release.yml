@@ -1,0 +1,15 @@
+# Pushing a tag like v1.2.3 creates a GitHub release; the tag message becomes the release notes.
+name: Release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: gh release create "$GITHUB_REF_NAME" --verify-tag --notes-from-tag
+        env:
+          GH_TOKEN: ${{ github.token }}
