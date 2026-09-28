@@ -1,7 +1,7 @@
 # Updates
 
 ## 2026-09-29
-- Changed: README screenshots retaken for the current version; added a screenshot of the "How it works" view.
+- Changed: README screenshots retaken for the current version; added screenshots of the "How it works" view and the Settings tab.
 - Changed: error-proneness chart redesigned as rows: mistakes to the right, right-answer bonus to the left, a dot at the real score, ★ for study-plan letters and ✓ for letters out of the plan.
 - Fixed: German part names in the error-proneness breakdown keep their capital letters.
 - Added: "How it works" view in Learning data explaining cards, weights, study plan and exam (numbers taken from the code).

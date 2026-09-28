@@ -74,6 +74,8 @@ progress starts again from zero. The status bar shows how often each level was c
   later or on another machine. Imported files are validated before anything is replaced.
 - **Reset:** clear the progress of a single level, or the learning data (statistics and study plan).
 
+![Settings tab](docs/screenshots/settings.png)
+
 ## Installation
 
 Requires Python ≥ 3.8 with tkinter (`sudo apt install python3-tk` on Debian/Ubuntu).
