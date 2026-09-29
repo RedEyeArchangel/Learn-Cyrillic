@@ -9,7 +9,8 @@ from tkinter import font as tkfont, messagebox, ttk
 
 from cyrillic.gui.theme import ACCENT, BAD, BG, CARD, FG, HOVER, MUTED, OK, STATUS_TXT, flat_button
 from cyrillic.i18n import LANG, _
-from cyrillic.questions import CARDS, LEVEL_TXT, QTYPES, question
+from cyrillic.data import EXAMPLES
+from cyrillic.questions import CARDS, LEVEL_TXT, QTYPES, hint, question
 from cyrillic.scheduler import (EXAM_MAX_PLAN, EXAM_MAX_WRONG, EXAM_QUESTIONS, EXAM_UNLOCK, MASTER, complete_level,
                                 pick, record, status)
 from cyrillic.sound import fanfare
@@ -17,36 +18,55 @@ from cyrillic.stats import PLAN_UNLOCK, SOUND_KEY, make_plan, partners, plan_car
 from cyrillic.storage import save_progress
 
 
+LISTEN = ("listen", "hearmeaning")  # question types that play the audio
+
+
 class LearnTab:
     def build_quiz(self, parent):
         f = ttk.Frame(parent, padding=20, style="Card.TFrame")
         top = ttk.Frame(f, style="Card.TFrame")
         top.pack(fill="x")
+        # one row, three groups: level (segmented) · mode toggles · exam
         for lv in CARDS:
             ttk.Radiobutton(top, text=f"{_(lv)} · {LEVEL_TXT[lv]}", value=lv, variable=self.level,
-                            style="Toolbutton", command=self.change_level).pack(side="left", padx=(0, 4))
-        self.listen = tk.BooleanVar()
-        self.listen_cb = ttk.Checkbutton(top, text=_("Listen only"), variable=self.listen, style="Card.TCheckbutton",
-                                         command=self.next_question)
-        self.listen_cb.pack(side="left", padx=16)
-        self.use_plan = tk.BooleanVar()
-        self.plan_cb = ttk.Checkbutton(top, variable=self.use_plan, style="Card.TCheckbutton",
-                                       command=self.next_question)
-        self.plan_cb.pack(side="left")
-        ttk.Style().configure("Card.TCheckbutton", background=CARD)
-        ttk.Style().map("Card.TCheckbutton", background=[("active", CARD)])
-        self.exam_btn = ttk.Button(top, command=self.toggle_exam)
+                            style="Toolbutton", command=self.change_level).pack(side="left", padx=(0, 2))
+        ttk.Frame(top, style="Card.TFrame", width=24).pack(side="left")  # gap between the groups
+        toggle = lambda text, var, cmd: ttk.Checkbutton(top, text=text, variable=var, style="Toolbutton",
+                                                        command=cmd, cursor="hand2")
+        self.listen, self.use_plan = tk.BooleanVar(), tk.BooleanVar()
+        self.listen_cb = toggle(_("Listen only"), self.listen, self.next_question)
+        self.plan_cb = toggle("", self.use_plan, self.next_question)
+        # free practice: quiz any level without recording anything (no progress, learning data or rounds)
+        self.free = tk.BooleanVar()
+        self.free_cb = toggle(_("Free practice"), self.free, lambda: (self.update_exam_btn(), self.next_question()))
+        for w in (self.listen_cb, self.plan_cb, self.free_cb):
+            w.pack(side="left", padx=(0, 2))
+        self.exam_btn = ttk.Button(top, command=self.toggle_exam, cursor="hand2")
         self.exam_btn.pack(side="right")
         self.mode_lbl = ttk.Label(f, style="Card.TLabel", foreground=MUTED, font=("Sans", 13))
         self.mode_lbl.pack(pady=(10, 0))
         self.exam = None
 
-        self.q_lbl = ttk.Label(f, style="Card.TLabel", wraplength=900, justify="center")
-        self.q_lbl.pack(pady=5, expand=True)
-        self.replay = ttk.Button(f, text=_("🔊 Listen again"), command=lambda: self.say(self.card.say))
+        q_row = ttk.Frame(f, style="Card.TFrame")  # the question, in free practice with a hint button behind it
+        q_row.pack(pady=5, expand=True)
+        self.q_lbl = ttk.Label(q_row, style="Card.TLabel", wraplength=900, justify="center")
+        self.q_lbl.pack(side="left")
+        self.hint_btn = ttk.Button(q_row, text=_("Hint"), style="Toolbutton", command=self.toggle_hint, cursor="hand2")
+        # free practice: after a mistake (or with the hint open) you go on yourself
+        self.next_btn = ttk.Button(q_row, text=_("Next"), style="Accent.TButton", command=self.next_question,
+                                   cursor="hand2")
+        self.advance = None  # pending automatic next question
+        self.hint_box = ttk.Frame(f, style="Card.TFrame")  # play the right word + explanation
+        ttk.Button(self.hint_box, text="🔊", style="Toolbutton", cursor="hand2",
+                   command=lambda: self.say(self.card.say)).pack(side="left", padx=(0, 12), anchor="n")
+        self.hint_lbl = ttk.Label(self.hint_box, style="Card.TLabel", justify="left", font=("Sans", 12))
+        self.hint_lbl.pack(side="left")
+        self.replay = ttk.Button(q_row, text=_("Listen again"), style="Toolbutton", cursor="hand2",
+                                 command=lambda: self.say(self.card.say))
         self.feedback = ttk.Label(f, font=("Sans", 16), style="Card.TLabel", wraplength=900, justify="center")
         self.feedback.pack()
-        f.bind("<Configure>", lambda e: [w.config(wraplength=e.width - 80) for w in (self.q_lbl, self.feedback)])
+        f.bind("<Configure>", lambda e: (self.q_lbl.config(wraplength=e.width - 200), self.feedback.config(
+            wraplength=e.width - 80), self.hint_lbl.config(wraplength=e.width - 200)))
         # fixed cells, so the buttons keep the same size for every level and question type:
         # full width, as high as a letter button (28 pt)
         opt_frame = ttk.Frame(f, style="Card.TFrame")
@@ -72,13 +92,16 @@ class LearnTab:
         done, plan = self.stats["rounds"][lv], len(self.stats["plan"])
         if self.exam:
             text, ok = _("Cancel exam"), True
+        elif self.free.get():
+            text, ok = _("Exam · not in free practice"), False
         elif done < EXAM_UNLOCK:
-            text, ok = _("Exam (after {}× {}, {}/{})").format(EXAM_UNLOCK, _(lv), done, EXAM_UNLOCK), False
+            text, ok = _("Exam · from {}× {} ({}/{})").format(EXAM_UNLOCK, _(lv), done, EXAM_UNLOCK), False
         elif plan > EXAM_MAX_PLAN:
-            text, ok = _("Exam (study plan max. {} letter, now {})").format(EXAM_MAX_PLAN, plan), False
+            text, ok = _("Exam · study plan {} letters (max. {})").format(plan, EXAM_MAX_PLAN), False
         else:
-            text, ok = _("Exam ({} questions, max. {} mistakes)").format(n, EXAM_MAX_WRONG), True
-        self.exam_btn.config(text=text)
+            text, ok = _("Start exam · {} questions").format(n), True
+        # blue = can be started now
+        self.exam_btn.config(text=text, style="Accent.TButton" if ok and not self.exam else "TButton")
         self.exam_btn.state(["!disabled"] if ok else ["disabled"])
 
     def update_plan_cb(self):
@@ -87,10 +110,9 @@ class LearnTab:
         if done >= PLAN_UNLOCK:
             self.stats["plan"] = make_plan(self.stats)
         ok = done >= PLAN_UNLOCK and self.stats["plan"]
-        self.plan_cb.config(text=_("Study plan") if ok else
-                            _("Study plan (after {}× Easy, {}/{})").format(PLAN_UNLOCK, min(done, PLAN_UNLOCK),
-                                                                           PLAN_UNLOCK)
-                            if done < PLAN_UNLOCK else _("Study plan (no weak letters)"))
+        self.plan_cb.config(text=_("Study plan · {}").format(len(self.stats["plan"])) if ok else
+                            _("Study plan · {}/{}× Easy").format(min(done, PLAN_UNLOCK), PLAN_UNLOCK)
+                            if done < PLAN_UNLOCK else _("Study plan · empty"))
         self.plan_cb.state(["!disabled"] if ok else ["disabled"])
         if not ok:
             self.use_plan.set(False)
@@ -108,10 +130,15 @@ class LearnTab:
         self.exam = None if self.exam else {"queue": random.sample(cards, min(EXAM_QUESTIONS, len(cards))), "wrong": 0}
         if self.exam:
             self.exam["total"] = len(self.exam["queue"])
+        self.free_cb.state(["disabled"] if self.exam else ["!disabled"])
         self.update_exam_btn()
         self.next_question()
 
     def next_question(self):
+        if self.advance:  # e.g. "Next" pressed or level changed while the timer was still running
+            self.after_cancel(self.advance)
+            self.advance = None
+        self.next_btn.pack_forget()
         lv = self.level.get()
         prog = self.progress[lv]
         if self.exam:
@@ -119,35 +146,48 @@ class LearnTab:
                 return self.finish_exam()
             self.card = self.exam["queue"].pop()
             done = self.exam["total"] - len(self.exam["queue"])
-            info = _("Exam · question {}/{} · mistakes {}").format(done, self.exam["total"], self.exam["wrong"])
+            info = _("Exam · question {}/{} · mistakes {} (max. {})").format(
+                done, self.exam["total"], self.exam["wrong"], EXAM_MAX_WRONG)
         else:
             last = self.card.key if hasattr(self, "card") else None
             plan = self.use_plan.get()
-            self.card = pick(prog, plan_cards(self.stats["plan"], lv) if plan else CARDS[lv], last)
-            s = min(prog.get(self.card.key, {"streak": 0})["streak"], MASTER)
-            info = f"{STATUS_TXT[status(prog.get(self.card.key))]} {'●' * s}{'○' * (MASTER - s)}"
+            cards = plan_cards(self.stats["plan"], lv) if plan else CARDS[lv]
+            if self.free.get():  # any card at random, the progress is not used
+                self.card = random.choice([c for c in cards if c.key != last] or cards)
+                info = _("Free practice · nothing is counted")
+            else:
+                self.card = pick(prog, cards, last)
+                s = min(prog.get(self.card.key, {"streak": 0})["streak"], MASTER)
+                info = f"{STATUS_TXT[status(prog.get(self.card.key))]} {'●' * s}{'○' * (MASTER - s)}"
             info += "  ·  " + _("Study plan") if plan else ""
         qtypes = QTYPES[lv]
-        if self.listen.get() and lv != "Easy":
-            self.qtype, title = qtypes[-1]
+        if self.listen.get() and lv != "Easy":  # listening types only ("listen", Medium also "hearmeaning")
+            self.qtype, title = random.choice([q for q in qtypes if q[0] in LISTEN])
         else:  # never the same question type twice in a row
             self.qtype, title = random.choice([q for q in qtypes if q[0] != getattr(self, "qtype", None)])
         self.mode_lbl.config(text=f"{title}     {info}")
+        self.hint_box.pack_forget()
+        self.hint_open = False
+        # buttons behind the question, in this order: listen again · hint (· next, packed later)
+        for w in (self.replay, self.hint_btn):
+            w.pack_forget()
+        if self.qtype in LISTEN:
+            self.replay.pack(side="left", padx=(24, 0))
+        if self.free.get() and not self.exam:
+            self.hint_btn.pack(side="left", padx=(8 if self.qtype in LISTEN else 24, 0))
         self.answered = False
         self.feedback.config(text="")
         confused = partners(self.stats, self.card.key) if self.use_plan.get() else ()
         prompt, opts, self.right = question(self.card, lv, self.qtype, confused=confused)
         big = self.qtype in ("sound", "read", "meaning")  # Cyrillic text as the question
         size = {"Easy": 100 if big else 48, "Medium": 60 if big else 44, "Hard": 34 if big else 28}[lv]
+        self.q_size = size  # the hint shrinks it temporarily
         self.q_lbl.config(text=prompt, font=("Sans", size))
-        if self.qtype == "listen":
-            self.replay.pack(before=self.feedback)
+        if self.qtype in LISTEN:
             self.say(self.card.say)
-        else:
-            self.replay.pack_forget()
         if self.qtype in ("letter", "spell"):
             size = 28  # single letters
-        elif self.qtype in ("wordgap", "meaning"):
+        elif self.qtype in ("wordgap", "meaning", "hearmeaning"):
             size = 20
         else:
             size = {"Easy": 18, "Medium": 20, "Hard": 15}[lv]
@@ -156,36 +196,66 @@ class LearnTab:
             b.config(text=o, bg=HOVER, font=("Sans", size), command=lambda o=o, b=b: self.choose(o, b))
             self.opts[o] = b
 
+    def toggle_hint(self):
+        """Show / hide how the current card is written and why (free practice only)."""
+        if self.hint_open:  # (winfo_ismapped is only true after a redraw)
+            self.hint_open = False
+            self.q_lbl.config(font=("Sans", self.q_size))
+            if self.answered:
+                self.feedback.config(text=self.full_feedback)
+            return self.hint_box.pack_forget()
+        if self.answered:  # reading the hint after answering: stop the timer, go on with "Next"
+            self.wait_for_next()
+            self.feedback.config(text=self.verdict)  # the details are in the hint now
+        self.q_lbl.config(font=("Sans", int(self.q_size * .6)))  # make room so the answer buttons stay visible
+        self.hint_lbl.config(text=hint(self.card, self.level.get()))
+        self.hint_box.pack(before=self.feedback, pady=(0, 10))
+        self.hint_open = True
+
     def choose(self, o, b):
         if self.answered:
             return
         self.answered = True
         c, lv = self.card, self.level.get()
         correct = o == self.right
-        record(self.progress[lv], c.key, correct)
-        if self.qtype in ("sound", "letter", "spell"):  # answers that are clearly a single letter
-            key = {"sound": SOUND_KEY.get, "letter": lambda x: x[0], "spell": str.upper}[self.qtype]
-            record_letter(self.stats, key(self.right), key(o))
-        if complete_level(self.progress[lv], self.stats["rounds"], lv, CARDS[lv]):
-            self.after(900, lambda: self.celebrate(lv))
-        self.update_plan_cb()
-        save_progress(self.progress)
+        if not self.free.get():  # free practice records nothing (no exam possible then)
+            record(self.progress[lv], c.key, correct)
+            if self.qtype in ("sound", "letter", "spell"):  # answers that are clearly a single letter
+                key = {"sound": SOUND_KEY.get, "letter": lambda x: x[0], "spell": str.upper}[self.qtype]
+                record_letter(self.stats, key(self.right), key(o))
+            if complete_level(self.progress[lv], self.stats["rounds"], lv, CARDS[lv]):
+                self.after(900, lambda: self.celebrate(lv))
+            self.update_plan_cb()
+            save_progress(self.progress)
         self.opts[self.right].config(bg=OK)
         detail = c.info if lv == "Easy" else f"{c.show}  =  {c.answer}  ·  {c.meaning}"
-        if correct:
-            self.feedback.config(text=_("Correct!  ·  {}").format(detail), foreground=OK)
-        else:
+        if c.key in EXAMPLES:  # Medium: the word in a short sentence
+            detail += "\n{} – {}".format(*EXAMPLES[c.key])
+        # full feedback, or only the verdict while the hint is open (it already shows all of it, and space is short)
+        self.verdict = _("Correct!") if correct else _("Wrong")
+        self.full_feedback = _("Correct!  ·  {}").format(detail) if correct else _("Wrong — {}").format(detail)
+        self.feedback.config(text=self.verdict if self.hint_open else self.full_feedback,
+                             foreground=OK if correct else BAD)
+        if not correct:
             b.config(bg=BAD)
-            self.feedback.config(text=_("Wrong — {}").format(detail), foreground=BAD)
             if self.exam:
                 self.exam["wrong"] += 1
-        reveal = {"listen": c.show, "spell": c.show, "wordgap": c.show}
+        reveal = {"listen": c.show, "hearmeaning": c.show, "spell": c.show, "wordgap": c.show}
         if self.qtype in reveal:
             self.q_lbl.config(text=reveal[self.qtype])
         self.say(c.say)
         self.refresh()
         extra = 1500 if lv == "Hard" else 0
-        self.after((1500 if correct else 3500) + extra, self.next_question)
+        if self.free.get() and not correct:  # free practice: take your time, open the hint if you want
+            self.wait_for_next()
+        else:
+            self.advance = self.after((1500 if correct else 3500) + extra, self.next_question)
+
+    def wait_for_next(self):
+        if self.advance:
+            self.after_cancel(self.advance)
+            self.advance = None
+        self.next_btn.pack(side="left", padx=(8, 0))
 
     def celebrate(self, lv):
         """Confetti over the whole window + fanfare. Click to close."""
@@ -221,6 +291,10 @@ class LearnTab:
     def finish_exam(self):
         wrong = self.exam["wrong"]
         passed = wrong <= EXAM_MAX_WRONG
+        if passed:  # counted per level in the status bar
+            self.stats["exams"][self.level.get()] += 1
+            save_progress(self.progress)
         self.toggle_exam()
+        self.refresh()
         messagebox.showinfo(_("Exam"), (_("Passed! 🎉") if passed else _("Not passed.")) + "\n" +
                             _("{} mistakes (allowed: {})").format(wrong, EXAM_MAX_WRONG))

@@ -10,10 +10,10 @@ import tempfile
 import wave
 from pathlib import Path
 
-from cyrillic.data import GROUPS, LETTERS, SENTENCES, SOUND, WORDS
+from cyrillic.data import COGNATES, EXAMPLES, GROUPS, LETTERS, SENTENCES, SOUND, WORDS
 from cyrillic.gui.theme import STYLES
 from cyrillic.i18n import DE
-from cyrillic.questions import CARDS, QTYPES, question, translit
+from cyrillic.questions import CARDS, QTYPES, hint, question, translit
 from cyrillic.scheduler import (BATCH, KEEP_AFTER, MASTER, complete_level, learned, pick, record,
                                 status)
 from cyrillic.sound import fanfare
@@ -49,7 +49,7 @@ def selftest():
     # learning algorithm
     letters, prog = CARDS["Easy"], {}
     assert pick(prog, letters, rng=rng).group == 1, "new letters come group by group, group 1 first"
-    assert pick({}, CARDS["Medium"], rng=rng).group == 1, "easy words first"
+    assert pick({}, CARDS["Medium"], rng=rng).key in COGNATES, "cognates first (reading gives the meaning)"
     record(prog, "А", True)
     assert status(prog["А"]) == "yellow"
     for _ in range(MASTER - 1):
@@ -106,6 +106,20 @@ def selftest():
     assert {c.key for c in plan_cards(plan, "Easy")} == set(plan)
     assert all(set(c.key.lower()) & set("шщыи") for c in plan_cards(plan, "Medium"))
     assert plan_cards(["Ъ"], "Hard") == CARDS["Hard"], "no match -> all cards"
+    # hint (free practice): letter by letter + the rules behind it, for every card of every level
+    card = lambda lv, k: next(c for c in CARDS[lv] if c.key == k)
+    assert (hint(card("Medium", "объект"), "Medium").splitlines()[1]
+            == "о = o  ·  б = b  ·  ъ = –  ·  е = ye  ·  к = k  ·  т = t")
+    assert "ъ (hard sign)" in hint(card("Medium", "объект"), "Medium")
+    assert "р: looks like Latin “p”, but is “r”" in hint(card("Easy", "Р"), "Easy")
+    assert all(hint(c, lv) for lv in CARDS for c in CARDS[lv])
+    # Medium: example sentence for every word (with a German translation), cognate note, listen -> meaning
+    assert set(EXAMPLES) == {c.key for c in CARDS["Medium"]} and COGNATES <= set(EXAMPLES)
+    assert all(tr in DE for _ru, tr in EXAMPLES.values()), "German translation for every example"
+    assert "Example: Мы ждём у подъезда." in hint(card("Medium", "подъезд"), "Medium")
+    assert "Cognate" in hint(card("Medium", "музей"), "Medium") and "Cognate" not in hint(card("Medium", "юг"), "Medium")
+    prompt, opts, right = question(card("Medium", "подъезд"), "Medium", "hearmeaning", rng)
+    assert prompt == "?" and right == card("Medium", "подъезд").meaning and right in opts
     ch = next(c for c in CARDS["Easy"] if c.key == "Ш")
     assert "Щ щ" in question(ch, "Easy", "letter", rng, confused=["Щ"])[1]
     for _ in range(HIST_MAX + 5):
@@ -121,9 +135,11 @@ def selftest():
     assert old["Easy"]["А"]["streak"] == 2 and "Leicht" not in old and old["stats"]["rounds"]["Easy"] == 2, "German levels"
     assert normalize({"stats": {"done": 3}})["stats"]["rounds"] == {"Easy": 3, "Medium": 0, "Hard": 0}, \
         "old Easy counter"
+    assert normalize({})["stats"]["exams"] == {"Easy": 0, "Medium": 0, "Hard": 0}, "passed exams per level"
     for bad in ([], {"Easy": {"А": 5}}, {"Easy": {}, "stats": {"done": "x"}},
                 {"Easy": {}, "stats": {"hist": {"А": ["a"]}}}, {"foo": 1}, {"Easy": {}, "stats": 3},
-                {"Easy": {}, "stats": {"plan": [1]}}, {"Leicht": {"А": 5}}, {"stats": {"rounds": {"Easy": "x"}}}):
+                {"Easy": {}, "stats": {"plan": [1]}}, {"Leicht": {"А": 5}}, {"stats": {"rounds": {"Easy": "x"}}},
+                {"stats": {"exams": {"Easy": "x"}}}):
         try:
             normalize(bad)
             raise AssertionError(bad)

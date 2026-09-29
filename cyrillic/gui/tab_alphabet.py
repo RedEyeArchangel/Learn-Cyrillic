@@ -41,8 +41,8 @@ class AlphabetTab:
         self.letter_stat.pack()
         btns = ttk.Frame(right, style="Card.TFrame")
         btns.pack(pady=10)
-        ttk.Button(btns, text=_("🔊 Letter"), command=lambda: self.say(self.cur[2])).pack(side="left", padx=5)
-        ttk.Button(btns, text=_("🔊 Word"), command=lambda: self.say(self.cur[4])).pack(side="left", padx=5)
+        ttk.Button(btns, text=_("Letter"), command=lambda: self.say(self.cur[2])).pack(side="left", padx=5)
+        ttk.Button(btns, text=_("Word"), command=lambda: self.say(self.cur[4])).pack(side="left", padx=5)
         return f
 
     def show(self, l, speak=True):

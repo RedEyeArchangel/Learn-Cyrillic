@@ -33,8 +33,11 @@ def apply_theme(root):
     st.configure("TCheckbutton", indicatorbackground=CARD, indicatorforeground=ACCENT)
     st.map("TCheckbutton", background=[("active", BG)])
     st.configure("Toolbutton", background=HOVER, padding=(14, 6), borderwidth=0)
-    st.map("Toolbutton", background=[("selected", ACCENT), ("active", "#3d4250")],
-           foreground=[("selected", "white")])
+    st.map("Toolbutton", background=[("disabled", CARD), ("selected", ACCENT), ("active", "#3d4250")],
+           foreground=[("disabled", MUTED), ("selected", "white")])
+    st.configure("Accent.TButton", background=ACCENT, foreground="white", padding=(14, 6), borderwidth=0,
+                 focuscolor=ACCENT)
+    st.map("Accent.TButton", background=[("active", "#3d7bf0")])
     st.configure("Card.TFrame", background=CARD)
     st.configure("Card.TLabel", background=CARD)
     st.configure("Muted.TLabel", foreground=MUTED)

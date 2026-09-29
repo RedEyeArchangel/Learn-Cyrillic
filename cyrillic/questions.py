@@ -5,7 +5,8 @@ import random
 import re
 from collections import namedtuple
 
-from cyrillic.data import CYR_SWAP, LETTERS, MISREAD, SENTENCES, SIMILAR, SOUND, TR, VOWELS, WORDS
+from cyrillic.data import (COGNATES, CYR_SWAP, EXAMPLES, LETTERS, MISREAD, SENTENCES, SIMILAR, SOUND, TR, VOWELS,
+                           WORDS)
 from cyrillic.i18n import _
 
 
@@ -29,8 +30,9 @@ LETTER_GROUP = {l[1]: l[6] for l in LETTERS}
 
 
 def text_card(ru, meaning):
-    # difficulty = hardest letter group in the text -> easy words come first
-    return Card(ru, ru, ru, translit(ru), meaning, max(LETTER_GROUP.get(c, 1) for c in ru.lower()), ru, meaning)
+    # difficulty = hardest letter group in the text -> easy words come first; cognates before everything else
+    group = max(LETTER_GROUP.get(c, 1) for c in ru.lower()) - 10 * (ru in COGNATES)
+    return Card(ru, ru, ru, translit(ru), meaning, group, ru, meaning)
 
 
 CARDS = {
@@ -46,7 +48,8 @@ QTYPES = {
     "Easy": [("sound", _("Which sound?")), ("letter", _("Which letter makes this sound?"))],
     "Medium": [("read", _("How do you read this?")), ("write", _("How do you write this?")),
                ("meaning", _("What does this mean?")), ("reverse", _("How do you say this in Russian?")),
-               ("spell", _("Which letter is missing?")), ("listen", _("What do you hear?"))],
+               ("spell", _("Which letter is missing?")), ("hearmeaning", _("What does the word you hear mean?")),
+               ("listen", _("What do you hear?"))],
     "Hard": [("read", _("How do you read this?")), ("write", _("How do you write this?")),
              ("meaning", _("What does this mean?")), ("reverse", _("How do you say this in Russian?")),
              ("wordgap", _("Which word is missing?")), ("listen", _("What do you hear?"))],
@@ -99,8 +102,58 @@ def question(card, level, qtype, rng=random, n=4, confused=()):
             prompt, right = f"{gapped}\n({card.meaning})", w.lower()
             words = rng.sample(SENT_WORDS, len(SENT_WORDS))
             cand = [misspell(right, rng, .5)] + sorted(words, key=lambda x: abs(len(x) - len(right)))
+        elif qtype == "hearmeaning":
+            prompt, right, cand = "?", card.meaning, [c.meaning for c in others]
         else:  # listen
             prompt, right, cand = "?", card.show, typos + [c.show for c in others]
     opts = list(dict.fromkeys(x for x in cand if x != right))[:n - 1] + [right]
     rng.shuffle(opts)
     return prompt, opts, right
+
+
+# --- hint (free practice): how a card is written and why ---
+LETTER = {l[1]: l for l in LETTERS}
+NOTES = {
+    "е": _("е: at the start of a word or after a vowel “ye”, after a consonant “e” and it softens the consonant"),
+    "ё": _("ё: “yo”, always stressed – the two dots are often left out in normal texts"),
+    "й": _("й: short “y”, glides after a vowel (like the y in “boy”)"),
+    "ь": _("ь (soft sign): no sound of its own, softens the consonant before it"),
+    "ъ": _("ъ (hard sign): no sound of its own, separates the consonant from the next vowel"),
+    "ы": _("ы: dull i, tongue pulled back – not the same as и"),
+}
+
+
+def letter_notes(letters, n=6):
+    """Why-notes for the special letters, at most n: rules (signs, е/ё/й/ы) first, then false friends, then new
+    sounds; each group in order of first appearance."""
+    notes = []
+    for ch in dict.fromkeys(letters):
+        if ch in NOTES:
+            notes.append((0, NOTES[ch]))
+        elif ch in LETTER and LETTER[ch][6] == 2 and ch in MISREAD:  # false friend
+            notes.append((1, _("{}: looks like Latin “{}”, but is “{}”").format(ch, MISREAD[ch], TR[ch])))
+        elif ch in LETTER and LETTER[ch][6] == 4:  # new sound
+            notes.append((2, f"{ch}: {SOUND[ch.upper()]}"))
+    return [t for _p, t in sorted(notes, key=lambda x: x[0])][:n]
+
+
+def hint(card, level):
+    """Explanation for a card: word, transliteration, letter by letter (or word by word) and the rules behind it."""
+    if level == "Easy":
+        up, low, name, pron, ex, tr, _g = LETTER[card.key.lower()]
+        lines = [f"{up} {low}  ·  " + _("name “{}”").format(name) + f"  ·  {pron}",
+                 _("Example: {} = {} ({})").format(ex, translit(ex), tr)]
+        return "\n".join(lines + letter_notes(low))
+    text = card.key
+    lines = [f"{card.show}  =  {card.answer}  ·  {card.meaning}"]
+    if level == "Medium":  # letter by letter, e.g. д = d · о = o · м = m
+        parts = [translit(text[:i + 1])[len(translit(text[:i])):] or "–" for i in range(len(text))]
+        lines.append("  ·  ".join(f"{ch} = {t}" for ch, t in zip(text, parts) if ch.isalpha()))
+        if text in EXAMPLES:
+            lines.append(_("Example: {} – {}").format(*EXAMPLES[text]))
+        if text in COGNATES:
+            lines.append(_("Cognate: once you can read it, you know what it means"))
+    else:  # word by word
+        lines.append("  ·  ".join(f"{w} = {translit(w)}" for w in re.findall(RU_WORD, text)))
+    # at most 6 lines in total, so the answer buttons stay visible
+    return "\n".join(lines + letter_notes((c for c in text.lower() if c.isalpha()), 6 - len(lines)))

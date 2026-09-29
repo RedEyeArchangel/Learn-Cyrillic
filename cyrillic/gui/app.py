@@ -127,8 +127,9 @@ class App(AlphabetTab, LearnTab, StatsTab, ReferenceTab, tk.Tk):
         n = sum(status(self.progress[lv].get(c.key)) == "green" for c in cards)
         self.pbar.config(value=n, maximum=len(cards))
         self.learned_lbl.config(text=_("{} learned: {}/{}").format(LEVEL_TXT[lv], n, len(cards)))
-        rounds = self.stats["rounds"]
-        self.rounds_lbl.config(text=_("Completed: {}").format(" · ".join(f"{_(lv)} {rounds[lv]}×" for lv in CARDS)))
+        count = lambda d: " · ".join(f"{_(lv)} {d[lv]}×" for lv in CARDS)
+        self.rounds_lbl.config(text=_("Completed: {}").format(count(self.stats["rounds"])) + "     " +
+                               _("Exams passed: {}").format(count(self.stats["exams"])))
 
     def export_progress(self):
         path = filedialog.asksaveasfilename(title=_("Export progress"), defaultextension=".json",

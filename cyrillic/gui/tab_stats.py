@@ -136,19 +136,35 @@ class StatsTab:
         w = [wt for _n, wt in PARTS]
         sections = [
             (_("Learning a card"), _(
-                "Answer a card right {} times in a row and it is learned (green); a mistake sets it back to 0 (red). "
-                "At most {} cards are in progress at once, new ones come in order of difficulty. The next card is "
-                "drawn at random, weighted: red {}, yellow/new {}, green {}. Learned cards come back for review "
-                "with a {:.0%} chance. When a whole level is learned it counts +1 and starts again from zero – "
-                "the first {} times. After that "
-                "it stays learned (until you reset it in Settings), and you keep working on your weak letters.").format(
+                "Answer a card right {} times in a row and it is learned (green); a mistake sets it back to 0 "
+                "(red). At most {} cards are in progress at once, new ones come in order of difficulty. The next "
+                "card is drawn at random, weighted: red {}, yellow/new {}, green {}. Learned cards come back for "
+                "review with a {:.0%} chance. When a whole level is learned it counts +1 and starts again from "
+                "zero – the first {} times. After that it stays learned (until you reset it in Settings), and you"
+                " keep working on your weak letters. "
+                "Words (Medium): cognates like музей or метро come first – reading them gives you the meaning. After "
+                "every answer you see the word in a short example sentence, and “what does the word you hear mean?” "
+                "trains the meaning by ear.").format(
                 MASTER, BATCH, WEIGHT["red"], WEIGHT["yellow"], WEIGHT["green"], REVIEW_CHANCE, KEEP_AFTER)),
             (_("Error proneness"), _(
                 "Only questions whose answer is a single letter count. Score per letter:\n• error rate of the "
                 "last 10 answers (0–1)\n• +{} per confusion (asked, another letter chosen)\n• +{} per wrongly pressed "
                 "(chosen, but another letter was right)\n• +{} per look-up in the Reference\n• +{} per “forgot again” "
                 "(a mistake after {} right in a row)\n• {} per right answer\nA mistake halves the right-answer bonus "
-                "instead of deleting it.").format(w[1], w[2], w[3], w[4], RELAPSE, w[5])),
+                "instead of deleting it."
+                "\nIn the chart: mistakes grow to the right, the right-answer bonus to the left, the dot is the "
+                "score. ★ = in the study plan, ✓ = dropped out of the plan.").format(w[1], w[2], w[3], w[4], RELAPSE, w[5])),
+            (_("Buttons in Learn"), _(
+                "• Levels: Easy (letters), Medium (words), Hard (sentences).\n• Listen only (Medium and Hard): "
+                "only “what do you hear?” questions.\n• Study plan: asks only your weak letters. The button shows "
+                "how many letters are in the plan, “empty”, or how far you are from unlocking it.\n• Free "
+                "practice: quiz any level without counting anything – no progress, no learning data, no completed"
+                " rounds, no exam."
+                " “Hint” behind the word explains how it is written and why, 🔊 plays it. After a "
+                "mistake it waits for “Next”."
+                "\n• Exam: blue when it can be started, otherwise it shows what is still "
+                "missing.\nThe status bar at the bottom shows the learned cards of the level, the completed rounds"
+                " and the passed exams per level.")),
             (_("Study plan"), _(
                 "Unlocked after completing Easy {} times, then rebuilt after every answer: the letters with a "
                 "score above 0, weakest first – as many as there are. Once right answers push a letter to 0 or "
@@ -156,7 +172,8 @@ class StatsTab:
                 "letter is weak. With the plan on, Easy asks only these letters, Medium and Hard only words that "
                 "contain one, and the wrong options are your own confusions.").format(PLAN_UNLOCK)),
             (_("Exam"), _("One exam per level: {} random questions, passed with at most {} mistakes. Unlocked once "
-                          "the level was completed {} times and the study plan has at most {} letter.").format(
+                          "the level was completed {} times and the study plan has at most {} letter. Passed "
+                          "exams are counted in the status bar.").format(
                 EXAM_QUESTIONS, EXAM_MAX_WRONG, EXAM_UNLOCK, EXAM_MAX_PLAN)),
         ]
         y, width = 2, cv.winfo_width() - 8

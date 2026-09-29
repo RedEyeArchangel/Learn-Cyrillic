@@ -1,5 +1,18 @@
 # Updates
 
+## 2026-09-30
+- Changed: Medium introduces cognates (музей, метро, банк …) first, so reading a word already gives its meaning.
+- Added: an example sentence for every Medium word, shown after answering and in the hint.
+- Added: Medium question type "What does the word you hear mean?".
+- Changed: "Listen again" sits next to the question; with the hint open the feedback shows only "Correct!"/"Wrong" and the hint has at most 6 lines, so the answer buttons always stay visible.
+- Changed: in free practice a wrong answer waits for a "Next" button instead of moving on after 3.5 s, so the hint can be read; opening the hint also stops the timer.
+- Added: "Hint" button behind the word in free practice – explains how the word is written and why (letter by letter or word by word, false friends, soft/hard sign, е/ё/й rules) with a 🔊 button to hear it.
+- Changed: "How it works" explains the Learn buttons (levels, listen only, study plan, free practice, exam), the status bar and how to read the error-proneness chart.
+- Removed: emojis from buttons and texts; only the congratulations (🎉) and the voice test in Settings (🔊) keep theirs.
+- Changed: Learn tab top row redesigned – "Listen only", "Study plan" and "Free practice" are toggle buttons in the same style as the levels, shorter labels, the exam button is blue when it can be started; the exam line shows the allowed mistakes.
+- Added: "Free practice" checkbox in Learn – quiz any level without recording progress, learning data or completed rounds.
+- Added: passed exams are counted per level and shown in the status bar (also saved in export/import).
+
 ## 2026-09-29
 - Fixed: "How it works" scrolls (scrollbar + mouse wheel) when the text is taller than the window; the exam section was cut off.
 - Changed: README – repository links filled in, releases link, study-plan text and screenshots updated.

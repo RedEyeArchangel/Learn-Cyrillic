@@ -23,12 +23,18 @@ Multiple-choice quiz that works like a driving-school theory app: every card has
 small batches, easiest first, learned ones come back now and then for review.
 
 - **Three levels:** Easy – letters (sound ↔ letter), Medium – words (read, write, meaning, translate, missing
-  letter, listen) and Hard – sentences (read, write, meaning, translate, missing word, listen)
+  letter, listen, listen → meaning) and Hard – sentences (read, write, meaning, translate, missing word, listen)
 - **Transliteration** in a simple English style (zh, kh, ts, ch, sh, shch, ya, yu …)
 - **Smart distractors:** similar-looking letters, typical misreadings and spelling mix-ups
 - **Exam mode:** one exam per level, 20 questions, at most 2 mistakes – unlocked once the level was completed
   3 times and the study plan has at most 1 letter
 - **Listen only:** train purely by ear (words and sentences)
+- **Words made easier:** cognates (музей, метро, банк …) come first, every word has a short example sentence
+  (shown after answering and in the hint), and "What does the word you hear mean?" trains the meaning by ear
+- **Free practice:** quiz any level without counting anything – no progress, no learning data, no completed
+  rounds (the exam is off meanwhile). A **Hint** button behind the word explains how it is written and why
+  (letter by letter, false friends, soft/hard sign, е/ё/й rules), and 🔊 plays the right word. After a mistake
+  the quiz waits for **Next**, so you can open the hint first
 - **Study plan mode:** practice only your weak letters (see below)
 
 ![Learn tab](docs/screenshots/learn.png)
@@ -68,7 +74,8 @@ study plan.
 When every card of a level is learned (e.g. 33/33 letters), the level counts as completed once and its
 progress starts again from zero – the first 3 times. After the third round the level stays learned, so you can
 keep working on your weak letters (study plan); only the reset button in Settings starts it from zero again.
-The status bar shows how often each level was completed (e.g. *Completed: Easy 3× · Medium 1× · Hard 0×*).
+The status bar shows how often each level was completed and how many exams were passed per level
+(e.g. *Completed: Easy 3× · Medium 1× · Hard 0×   Exams passed: Easy 1× · Medium 0× · Hard 0×*).
 
 ### Settings
 - **Language:** English or German (Deutsch) – the whole app including meanings and pronunciation hints.
