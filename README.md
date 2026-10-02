@@ -171,3 +171,11 @@ Licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4
 - [Piper](https://github.com/OHF-Voice/piper1-gpl) (`piper-tts`, GPL-3.0-or-later) is an optional
   dependency, installed separately and not included in this repository.
 - The Piper voice models are not included and have their own licenses (see `voices/README.md`).
+
+## 💖 Support the Project
+
+If you find this project useful, consider supporting its development:
+
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?style=for-the-badge&logo=github&logoColor=white)](https://github.com/sponsors/RedEyeArchangel)
+
+*Your support helps maintain open-source projects like this and enables new features to be built!*
